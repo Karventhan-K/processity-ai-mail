@@ -1,4 +1,6 @@
 import os
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 import json
 import asyncio
 from typing import List, Dict, Any, Optional
@@ -14,13 +16,27 @@ from .ai_service import ai_service
 app = FastAPI(title="Processity AI Mail Backend")
 
 # Enable CORS for frontend clients
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+origins_env = os.getenv("ALLOWED_ORIGINS", "")
+if origins_env:
+    origins = [origin.strip() for origin in origins_env.split(",") if origin.strip()]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    # In development, dynamically allow and reflect any HTTP/HTTPS origin
+    # to support localhost, local IPs (e.g., 192.168.x.x), and docker containers.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[],
+        allow_origin_regex="https?://.*",
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # Keep track of active WebSocket connections
 class ConnectionManager:

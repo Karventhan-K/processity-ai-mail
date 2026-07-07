@@ -9,8 +9,29 @@ import ComposeModal from '../components/ComposeModal';
 import ConfigPanel from '../components/ConfigPanel';
 import { CheckCircle, ShieldAlert } from 'lucide-react';
 
-const BACKEND_URL = 'http://localhost:8000';
-const WS_URL = 'ws://localhost:8000/ws';
+const getBackendUrl = () => {
+  if (typeof window !== 'undefined') {
+    if (process.env.NEXT_PUBLIC_API_URL) {
+      return process.env.NEXT_PUBLIC_API_URL;
+    }
+    return `${window.location.protocol}//${window.location.hostname}:8000`;
+  }
+  return 'http://localhost:8000';
+};
+
+const getWsUrl = () => {
+  if (typeof window !== 'undefined') {
+    if (process.env.NEXT_PUBLIC_WS_URL) {
+      return process.env.NEXT_PUBLIC_WS_URL;
+    }
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${wsProtocol}//${window.location.hostname}:8000/ws`;
+  }
+  return 'ws://localhost:8000/ws';
+};
+
+const BACKEND_URL = getBackendUrl();
+const WS_URL = getWsUrl();
 
 export default function App() {
   // Config & Connection States

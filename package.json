@@ -3,10 +3,16 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "install:all": "npm install && npm install --prefix frontend && python -m venv venv && .\\venv\\Scripts\\pip install -r backend/requirements.txt",
+    "install:all": "npm install --legacy-peer-deps && python -m venv venv && .\\venv\\Scripts\\pip install -r backend/requirements.txt",
     "dev:backend": ".\\venv\\Scripts\\uvicorn backend.main:app --reload --port 8000",
-    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:frontend": ".\\node_modules\\.bin\\next dev frontend",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\""
+  },
+  "dependencies": {
+    "next": "15.1.4",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "lucide-react": "^0.469.0"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

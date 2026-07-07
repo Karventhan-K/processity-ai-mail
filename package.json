@@ -1,0 +1,14 @@
+{
+  "name": "processity-mail-app",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install && npm install --prefix frontend && python -m venv venv && .\\venv\\Scripts\\pip install -r backend/requirements.txt",
+    "dev:backend": ".\\venv\\Scripts\\uvicorn backend.main:app --reload --port 8000",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

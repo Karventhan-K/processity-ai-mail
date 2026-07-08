@@ -101,6 +101,16 @@ jobs:
             # Fetch latest changes from github
             git pull origin main
             
+            # Write environment variables to backend/.env dynamically
+            echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > backend/.env
+            echo "EMAIL_USER=${{ secrets.EMAIL_USER }}" >> backend/.env
+            echo "EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }}" >> backend/.env
+            echo "SMTP_HOST=${{ secrets.SMTP_HOST }}" >> backend/.env
+            echo "SMTP_PORT=${{ secrets.SMTP_PORT }}" >> backend/.env
+            echo "IMAP_HOST=${{ secrets.IMAP_HOST }}" >> backend/.env
+            echo "IMAP_PORT=${{ secrets.IMAP_PORT }}" >> backend/.env
+            echo "DATABASE_URL=postgresql://postgres:password123@db:5432/processity" >> backend/.env
+            
             # Restart containers with the new build
             sudo docker-compose down
             sudo docker-compose up -d --build

@@ -4,7 +4,7 @@ node_modules/
 
 # Ignore Next.js build output
 .next/
-**/ .next/
+**/.next/
 out/
 **/out/
 
@@ -12,7 +12,7 @@ out/
 venv/
 .venv/
 **/venv/
-**/ .venv/
+**/.venv/
 __pycache__/
 **/__pycache__/
 *.pyc

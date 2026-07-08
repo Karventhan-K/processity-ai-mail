@@ -75,11 +75,23 @@ export default function App() {
     setTimeout(() => setToast(null), 4000);
   };
 
-  // Fetch initial config and email list on mount
+  // Fetch initial config, email list, load chat history and setup WebSockets on mount
   useEffect(() => {
     fetchConfig();
     fetchEmails();
-    
+
+    // Load saved assistant messages on mount
+    if (typeof window !== 'undefined') {
+      const savedMessages = localStorage.getItem('processity_chat_history');
+      if (savedMessages) {
+        try {
+          setAssistantMessages(JSON.parse(savedMessages));
+        } catch (e) {
+          console.error('Failed to parse saved chat history:', e);
+        }
+      }
+    }
+
     // WebSockets Setup
     let socket;
     const connectWS = () => {
@@ -115,6 +127,17 @@ export default function App() {
     connectWS();
     return () => socket?.close();
   }, []);
+
+  // Save assistant messages on change
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (assistantMessages.length > 0) {
+        localStorage.setItem('processity_chat_history', JSON.stringify(assistantMessages));
+      } else {
+        localStorage.removeItem('processity_chat_history');
+      }
+    }
+  }, [assistantMessages]);
 
   const fetchConfig = async () => {
     try {
@@ -306,6 +329,7 @@ export default function App() {
         if (data.actions && data.actions.length > 0) {
           executeAIActions(data.actions, isHumanInTheLoop);
           assistantReply.action = data.actions.map(a => `${a.name}(${JSON.stringify(a.args)})`).join(', ');
+          assistantReply.actions = data.actions;
         }
 
         setAssistantMessages(prev => [...prev, assistantReply]);
@@ -375,8 +399,8 @@ export default function App() {
         if (args.query !== undefined) {
           setSearchQuery(args.query);
         }
-        showToast('Inbox filters updated by Copilot', 'info');
-        setTimeout(() => setActiveToolCall(null), 1000);
+        showToast('Inbox filters updated by AI Agent', 'info');
+        setTimeout(() => setActiveToolCall(null), 250);
       }
 
       else if (name === 'openEmail') {
@@ -395,7 +419,7 @@ export default function App() {
         } else {
           showToast(`No email matched "${keyword}"`, 'error');
         }
-        setTimeout(() => setActiveToolCall(null), 1000);
+        setTimeout(() => setActiveToolCall(null), 250);
       }
 
       else if (name === 'sendEmail') {
@@ -413,7 +437,7 @@ export default function App() {
           } else {
             showToast('No active compose draft to send.', 'error');
           }
-          setTimeout(() => setActiveToolCall(null), 1000);
+          setTimeout(() => setActiveToolCall(null), 250);
         } else {
           setActiveToolCall('Sending email draft...');
           if (composeAutoFillData) {
@@ -427,7 +451,7 @@ export default function App() {
               });
             }
           }
-          setTimeout(() => setActiveToolCall(null), 1000);
+          setTimeout(() => setActiveToolCall(null), 250);
         }
       }
     }
@@ -456,6 +480,40 @@ export default function App() {
   const handleCancelSend = () => {
     setPendingSendAction(null);
     setAssistantMessages(prev => [...prev, { role: 'assistant', content: 'Email send cancelled. Draft discarded.' }]);
+  };
+
+  const handleReopenCompose = (action) => {
+    const { name, args } = action;
+    console.log("App: Reopening composer with action data:", action);
+    if (name === 'openComposeView') {
+      setIsComposeOpen(true);
+      setComposeInitialData(null);
+      setComposeAutoFillData({
+        to: args.to || '',
+        subject: args.subject || '',
+        body: args.body || ''
+      });
+    } else if (name === 'replyToEmail') {
+      setIsComposeOpen(true);
+      const replyTo = args.to || (selectedEmail ? (selectedEmail.fromAddress || selectedEmail.from) : '');
+      const replySubject = args.subject || (selectedEmail ? `Re: ${selectedEmail.subject}` : 'Re: Mail');
+      
+      setComposeInitialData({
+        id: selectedEmail?.id || null,
+        to: replyTo,
+        subject: replySubject
+      });
+      setComposeAutoFillData({
+        to: replyTo,
+        subject: replySubject,
+        body: args.replyBody || ''
+      });
+    }
+  };
+
+  const handleClearHistory = () => {
+    setAssistantMessages([]);
+    showToast('Chat history cleared', 'success');
   };
 
   // Filter processing for rendering
@@ -557,6 +615,8 @@ export default function App() {
         confirmAction={handleApproveSend}
         cancelAction={handleCancelSend}
         pendingSendAction={pendingSendAction}
+        onReopenCompose={handleReopenCompose}
+        onClearHistory={handleClearHistory}
       />
 
       {/* Dynamic Popups */}

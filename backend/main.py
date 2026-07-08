@@ -101,12 +101,12 @@ async def startup_event():
             # Configure Mail Service on boot
             await mail_service.configure(mail_conf)
             # Configure AI service with API key
-            ai_service.configure(active_config.gemini_api_key or os.getenv("GEMINI_API_KEY", ""))
+            ai_service.configure(active_config.gemini_api_key or os.getenv("OPENAI_API_KEY", ""))
         else:
             # Configure with environment variables if no DB record exists
             env_email = os.getenv("EMAIL_USER")
             env_password = os.getenv("EMAIL_PASSWORD")
-            env_api_key = os.getenv("GEMINI_API_KEY", "")
+            env_api_key = os.getenv("OPENAI_API_KEY", "")
             
             ai_service.configure(env_api_key)
 

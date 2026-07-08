@@ -57,7 +57,7 @@ export default function ConfigPanel({ isOpen, onClose, currentConfig, onSave, is
           <div className="form-label-block">
             <label className="form-label-text">
               <Key className="w-4 h-4 text-cyan-400" />
-              <span>Gemini API Key</span>
+              <span>OpenAI API Key</span>
             </label>
             <input 
               type="password"

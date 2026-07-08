@@ -1,62 +1,13 @@
 import re
 import os
-import google.generativeai as genai
-
-# Define tool schemas using Python function definitions with docstrings.
-# The google-generativeai SDK automatically converts these into Gemini tool specifications.
-
-def openComposeView(to: str, subject: str = "", body: str = ""):
-    """
-    Opens the compose mail modal and fills in the fields. Visibly fills the fields.
-    
-    Args:
-        to: Recipient email address (e.g. john@example.com)
-        subject: The subject line of the email
-        body: The main body text of the email
-    """
-    pass
-
-def filterInbox(query: str = "", sender: str = "", unreadOnly: bool = False, daysAgo: int = 0):
-    """
-    Filters the list of emails in the main inbox UI based on criteria.
-    
-    Args:
-        query: Text search query for subject, body, or sender
-        sender: Filter by specific sender name or email
-        unreadOnly: If true, shows only unread emails
-        daysAgo: Filter emails from the last N days (e.g., 10)
-    """
-    pass
-
-def openEmail(keyword: str):
-    """
-    Navigates to and displays a specific email in detail view based on a search keyword.
-    
-    Args:
-        keyword: Search keyword matching sender name, subject, or contents
-    """
-    pass
-
-def replyToEmail(replyBody: str):
-    """
-    Replies to the currently open email. Pre-fills a reply composition form.
-    
-    Args:
-        replyBody: The content of the reply message
-    """
-    pass
-
-def sendEmail():
-    """
-    Triggers the sending of the currently open compose draft or reply draft.
-    """
-    pass
-
+import json
+import asyncio
+from openai import OpenAI
 
 class AIService:
     def __init__(self):
         self.api_key = None
-        self.model = None
+        self.client = None
         self.system_instruction = (
             "You are an AI assistant for a modern mail web application. "
             "Your goal is to help the user manage their email box. You have tools that can control the UI of the mail client. "
@@ -65,20 +16,91 @@ class AIService:
             "If the user wants to send an email, first compose/fill it in, then ask for confirmation if the Human-in-the-loop is active, or trigger the send tool if requested. "
             "Maintain context. Use the provided active view and open email details to assist when the user says 'reply to this' or similar."
         )
-        self.tools = [openComposeView, filterInbox, openEmail, replyToEmail, sendEmail]
+        self.tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "openComposeView",
+                    "description": "Opens the compose mail modal and fills in the fields. Visibly fills the fields.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "to": {"type": "string", "description": "Recipient email address (e.g. john@example.com)"},
+                            "subject": {"type": "string", "description": "The subject line of the email"},
+                            "body": {"type": "string", "description": "The main body text of the email"},
+                        },
+                        "required": ["to"],
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "filterInbox",
+                    "description": "Filters the list of emails in the main inbox UI based on criteria.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "query": {"type": "string", "description": "Text search query for subject, body, or sender"},
+                            "sender": {"type": "string", "description": "Filter by specific sender name or email"},
+                            "unreadOnly": {"type": "boolean", "description": "If true, shows only unread emails"},
+                            "daysAgo": {"type": "integer", "description": "Filter emails from the last N days (e.g., 10)"},
+                        },
+                        "required": [],
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "openEmail",
+                    "description": "Navigates to and displays a specific email in detail view based on a search keyword.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "keyword": {"type": "string", "description": "Search keyword matching sender name, subject, or contents"},
+                        },
+                        "required": ["keyword"],
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "replyToEmail",
+                    "description": "Replies to the currently open email. Pre-fills a reply composition form.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "replyBody": {"type": "string", "description": "The content of the reply message"},
+                        },
+                        "required": ["replyBody"],
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "sendEmail",
+                    "description": "Triggers the sending of the currently open compose draft or reply draft.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {},
+                        "required": [],
+                    },
+                },
+            }
+        ]
 
     def configure(self, api_key: str = ""):
-        self.api_key = api_key or os.getenv("GEMINI_API_KEY", "")
+        self.api_key = api_key or os.getenv("OPENAI_API_KEY", "")
         if self.api_key:
-            print("AIService: LLM configured successfully with Gemini API Key.")
-            genai.configure(api_key=self.api_key)
-            self.model = genai.GenerativeModel(
-                model_name="gemini-1.5-flash",
-                system_instruction=self.system_instruction,
-                tools=self.tools
-            )
+            print("AIService: LLM configured successfully with OpenAI API Key.")
+            self.client = OpenAI(api_key=self.api_key)
+            self.model = "gpt-4o-mini"
         else:
-            print("AIService: No Gemini API Key. Running in LOCAL fallback mode (regex).")
+            print("AIService: No API Key found. Running in LOCAL fallback mode (regex).")
+            self.client = None
             self.model = None
 
     async def process_message(self, user_message: str, chat_history: list = None, context: dict = None):
@@ -87,11 +109,10 @@ class AIService:
         if context is None:
             context = {}
 
-        if not self.model:
+        if not self.client:
             return self.process_local_fallback(user_message, context)
 
         try:
-            # Construct chat conversation with the system context injected
             # Format the context block
             context_prefix = (
                 f"[System Context: Active View=\"{context.get('currentView', 'inbox')}\", "
@@ -100,41 +121,53 @@ class AIService:
                 f"Open Email ID=\"{context.get('openEmail', {}).get('id') if context.get('openEmail') else 'None'}\"]\n\n"
             )
 
-            # Build history list in Gemini's expected format
-            contents = []
+            # Construct message payload
+            messages = [
+                {"role": "system", "content": self.system_instruction}
+            ]
+            
+            # Build history list in OpenAI's expected format
             for msg in chat_history:
-                role = "model" if msg.get("role") == "assistant" else "user"
-                contents.append({
+                role = "assistant" if msg.get("role") == "assistant" else "user"
+                messages.append({
                     "role": role,
-                    "parts": [msg.get("content", "")]
+                    "content": msg.get("content", "")
                 })
-
-            # Add current message
-            contents.append({
+                
+            # Add current message with context
+            messages.append({
                 "role": "user",
-                "parts": [context_prefix + user_message]
+                "content": context_prefix + user_message
             })
 
-            print("AIService: Sending request to Gemini API...")
-            response = self.model.generate_content(contents)
+            print(f"AIService: Sending request to LLM using model {self.model}...")
+            
+            # Run the synchronous API call in an executor to avoid blocking the async event loop
+            def call_openai():
+                return self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    tools=self.tools,
+                    tool_choice="auto"
+                )
+            
+            response = await asyncio.to_thread(call_openai)
             
             actions = []
             reply_text = ""
             
-            if response.candidates:
-                candidate = response.candidates[0]
-                if candidate.content and candidate.content.parts:
-                    for part in candidate.content.parts:
-                        # Extract text
-                        if part.text:
-                            reply_text += part.text
-                        # Extract function calls
-                        if part.function_call:
-                            actions.append({
-                                "type": "tool_call",
-                                "name": part.function_call.name,
-                                "args": dict(part.function_call.args)
-                            })
+            message_response = response.choices[0].message
+            if message_response.content:
+                reply_text = message_response.content
+                
+            if message_response.tool_calls:
+                for tool_call in message_response.tool_calls:
+                    args = json.loads(tool_call.function.arguments)
+                    actions.append({
+                        "type": "tool_call",
+                        "name": tool_call.function.name,
+                        "args": args
+                    })
 
             return {
                 "success": True,
@@ -143,7 +176,7 @@ class AIService:
             }
 
         except Exception as e:
-            print(f"AIService: Gemini API failed, falling back to local processing: {str(e)}")
+            print(f"AIService: LLM API failed, falling back to local processing: {str(e)}")
             return self.process_local_fallback(user_message, context)
 
     def process_local_fallback(self, message: str, context: dict):
@@ -152,33 +185,55 @@ class AIService:
         reply = ""
 
         # 1. Compose / Send Email
-        if any(w in text for w in ["compose", "write", "generate", "send", "new email"]):
+        if any(w in text for w in ["compose", "write", "generate", "send", "new email", "apply", "leave", "request", "draft", "sick", "vacation"]):
             email_match = re.search(r"([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})", message)
             to = email_match.group(1) if email_match else ""
-            if not to and any(w in text for w in ["processity", "hiring", "task"]):
-                to = "hiring@processity.ai"
+            if not to:
+                if any(w in text for w in ["leave", "sick", "vacation"]):
+                    to = "manager@company.com"
+                elif any(w in text for w in ["processity", "hiring", "task"]):
+                    to = "hiring@processity.ai"
+                else:
+                    to = "manager@company.com"
 
             subject = ""
             subject_match = re.search(r"subject\s+['\"]([^'\"]+)['\"]", message, re.IGNORECASE) or re.search(r"subject\s+(\w+)", message, re.IGNORECASE)
             if subject_match:
                 subject = subject_match.group(1)
+            elif any(w in text for w in ["leave", "sick", "vacation"]):
+                subject = "Leave Application"
+                if "one day" in text:
+                    subject = "Leave Application - One Day"
             elif any(w in text for w in ["processity", "hiring", "task"]):
                 subject = "Question regarding Processity Take-Home Task - Fullstack AI Applied Engineer"
             else:
                 about_match = re.search(r"(?:about|regarding)\s+['\"]([^'\"]+)['\"]", message, re.IGNORECASE) or re.search(r"(?:about|regarding)\s+([a-zA-Z0-9\s]+)", message, re.IGNORECASE)
                 if about_match:
                     subject = about_match.group(1).strip()
+                else:
+                    subject = "Mail Draft"
 
             body = ""
             body_match = re.search(r"body\s+['\"]([^'\"]+)['\"]", message, re.IGNORECASE) or re.search(r"body\s+([a-zA-Z0-9\s.,!'-]+)$", message, re.IGNORECASE)
             if body_match:
                 body = body_match.group(1)
+            elif any(w in text for w in ["leave", "sick", "vacation"]):
+                days = "one day" if "one day" in text else "leave"
+                reason = "unwell" if "sick" in text or "unwell" in text or "fever" in text else "personal reasons"
+                body = (
+                    f"Hi Manager,\n\n"
+                    f"I would like to apply for leave for {days} due to {reason}.\n"
+                    f"I will keep you updated on my recovery. Please let me know if this is approved.\n\n"
+                    f"Best regards,\nKarventhan"
+                )
             elif any(w in text for w in ["processity", "hiring", "task"]):
                 body = "Hi Processity Team,\n\nI hope you are doing well.\n\nI am currently working on the take-home task for the Fullstack AI Applied Engineer role. I wanted to ask regarding...\n\nBest regards,\nKarventhan K"
             elif "asking" in text:
                 ask_match = re.search(r"asking\s+(?:about\s+)?(.*)$", message, re.IGNORECASE)
                 if ask_match:
                     body = f"Hi, I wanted to ask: {ask_match.group(1)}."
+            else:
+                body = "Hi,\n\nHere is the drafted message.\n\nBest regards,\nKarventhan"
 
             actions.append({
                 "type": "tool_call",
@@ -272,7 +327,6 @@ class AIService:
             "reply": reply,
             "actions": actions
         }
-
 
 # Single global instance
 ai_service = AIService()

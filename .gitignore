@@ -44,3 +44,7 @@ Thumbs.db
 # Databases
 *.db
 processity.db
+
+# Next.js build output
+.next/
+frontend/.next/

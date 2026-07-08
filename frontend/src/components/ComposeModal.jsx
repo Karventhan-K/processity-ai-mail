@@ -54,13 +54,14 @@ export default function ComposeModal({
     
     setActiveTypingField('to');
 
-    const typingSpeed = 35; // milliseconds per character
+    const typingSpeed = 12; // Snappy typing speed
 
     const interval = setInterval(() => {
       if (currentField === 'to') {
         if (targetTo && charIndex < targetTo.length) {
-          setTo(prev => prev + targetTo[charIndex]);
-          charIndex++;
+          const chunk = targetTo.slice(charIndex, charIndex + 2);
+          setTo(prev => prev + chunk);
+          charIndex += 2;
         } else {
           currentField = 'subject';
           charIndex = 0;
@@ -68,8 +69,9 @@ export default function ComposeModal({
         }
       } else if (currentField === 'subject') {
         if (targetSubject && charIndex < targetSubject.length) {
-          setSubject(prev => prev + targetSubject[charIndex]);
-          charIndex++;
+          const chunk = targetSubject.slice(charIndex, charIndex + 2);
+          setSubject(prev => prev + chunk);
+          charIndex += 2;
         } else {
           currentField = 'body';
           charIndex = 0;
@@ -77,9 +79,9 @@ export default function ComposeModal({
         }
       } else if (currentField === 'body') {
         if (targetBody && charIndex < targetBody.length) {
-          const chunk = targetBody.slice(charIndex, charIndex + 2);
+          const chunk = targetBody.slice(charIndex, charIndex + 6);
           setBody(prev => prev + chunk);
-          charIndex += 2;
+          charIndex += 6;
         } else {
           clearInterval(interval);
           setActiveTypingField(null);

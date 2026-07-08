@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
-import { Sparkles, Mic, MicOff, RefreshCw, Check, ShieldAlert, CornerDownLeft } from 'lucide-react';
+import { Sparkles, RefreshCw, Check, ShieldAlert, CornerDownLeft, Trash2 } from 'lucide-react';
 
 export default function AssistantPanel({ 
   messages, 
@@ -9,69 +9,44 @@ export default function AssistantPanel({
   activeToolCall, 
   confirmAction, 
   cancelAction, 
-  pendingSendAction 
+  pendingSendAction,
+  onReopenCompose,
+  onClearHistory
 }) {
   const [input, setInput] = useState('');
   const [requireConfirmation, setRequireConfirmation] = useState(true);
-  const [isListening, setIsListening] = useState(false);
   
   const chatEndRef = useRef(null);
-  const recognitionRef = useRef(null);
+  const textareaRef = useRef(null);
 
   // Auto-scroll chat to bottom
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isGenerating, activeToolCall, pendingSendAction]);
 
-  // Speech Recognition Setup
+  // Auto-resize textarea height
   useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      const rec = new SpeechRecognition();
-      rec.continuous = false;
-      rec.interimResults = false;
-      rec.lang = 'en-US';
-
-      rec.onstart = () => {
-        setIsListening(true);
-      };
-
-      rec.onresult = (event) => {
-        const text = event.results[0][0].transcript;
-        setInput(text);
-      };
-
-      rec.onerror = (e) => {
-        console.error('Speech recognition error:', e);
-        setIsListening(false);
-      };
-
-      rec.onend = () => {
-        setIsListening(false);
-      };
-
-      recognitionRef.current = rec;
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
     }
-  }, []);
-
-  const handleMicToggle = () => {
-    if (!recognitionRef.current) {
-      alert("Speech recognition is not supported in this browser. Try Google Chrome.");
-      return;
-    }
-
-    if (isListening) {
-      recognitionRef.current.stop();
-    } else {
-      recognitionRef.current.start();
-    }
-  };
+  }, [input]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!input.trim() || isGenerating) return;
     onSendMessage(input, requireConfirmation);
     setInput('');
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'; // Reset height
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e);
+    }
   };
 
   const handleSuggestionClick = (text) => {
@@ -96,21 +71,46 @@ export default function AssistantPanel({
             <Sparkles className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="assistant-title-text">AI Copilot</h3>
+            <h3 className="assistant-title-text">AI Agent</h3>
             <p className="assistant-subtitle-text">UI Controller Mode</p>
           </div>
         </div>
 
-        {/* Human-in-the-loop flag */}
-        <label className="hitl-toggle-label" title="Intercepts send requests for approval">
-          <input 
-            type="checkbox" 
-            checked={requireConfirmation} 
-            onChange={(e) => setRequireConfirmation(e.target.checked)}
-            className="hitl-checkbox"
-          />
-          <span className="hitl-label-text">Confirm Send</span>
-        </label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* Clear history button */}
+          {messages.length > 0 && (
+            <button 
+              onClick={onClearHistory}
+              className="btn-clear-chat"
+              title="Clear chat history"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'color 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+
+          {/* Human-in-the-loop flag */}
+          <label className="hitl-toggle-label" title="Intercepts send requests for approval">
+            <input 
+              type="checkbox" 
+              checked={requireConfirmation} 
+              onChange={(e) => setRequireConfirmation(e.target.checked)}
+              className="hitl-checkbox"
+            />
+            <span className="hitl-label-text">Confirm Send</span>
+          </label>
+        </div>
       </div>
 
       {/* Message History */}
@@ -119,7 +119,7 @@ export default function AssistantPanel({
           <div className="empty-chat-state">
             <Sparkles className="w-8 h-8 text-cyan-500/50 animate-pulse" />
             <div>
-              <p className="empty-chat-title">Ask the Copilot anything</p>
+              <p className="empty-chat-title">Ask the AI Agent anything</p>
               <p className="empty-chat-desc">
                 Tell the assistant to compose emails, apply inbox filters, reply, or open emails.
               </p>
@@ -145,18 +145,120 @@ export default function AssistantPanel({
             className={`chat-bubble-wrapper ${msg.role === 'user' ? 'user' : 'assistant'}`}
           >
             <div className="chat-bubble">
-              <p>{msg.content}</p>
+              {msg.content && <p>{msg.content}</p>}
 
-              {/* Display AI actions inside message bubble if present */}
-              {msg.action && (
+              {/* Display AI actions visually if present */}
+              {msg.actions && msg.actions.map((act, actIdx) => {
+                const isReopenable = act.name === 'openComposeView' || act.name === 'replyToEmail';
+                return (
+                  <div 
+                    key={actIdx} 
+                    className={`chat-action-card ${isReopenable ? 'clickable-action-card' : ''}`}
+                    onClick={() => {
+                      if (isReopenable && onReopenCompose) {
+                        onReopenCompose(act);
+                      }
+                    }}
+                    title={isReopenable ? "Click to reopen composer with this draft" : undefined}
+                  >
+                    {act.name === 'openComposeView' && (
+                      <>
+                        <div className="chat-action-header">
+                          <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>Action: Compose Email {isReopenable && <span style={{fontSize: '9px', textTransform: 'none', marginLeft: 'auto', opacity: 0.7}}>(Click to reopen)</span>}</span>
+                        </div>
+                        {act.args.to && (
+                          <div className="chat-action-row">
+                            <span className="chat-action-label">To:</span>
+                            <span className="chat-action-value" style={{ color: 'var(--accent-cyan)' }}>{act.args.to}</span>
+                          </div>
+                        )}
+                        {act.args.subject && (
+                          <div className="chat-action-row">
+                            <span className="chat-action-label">Subject:</span>
+                            <span className="chat-action-value" style={{ fontWeight: 500 }}>{act.args.subject}</span>
+                          </div>
+                        )}
+                        {act.args.body && (
+                          <div className="chat-action-row" style={{ flexDirection: 'column', gap: '4px' }}>
+                            <span className="chat-action-label">Body:</span>
+                            <div className="chat-action-body-preview">{act.args.body}</div>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {act.name === 'replyToEmail' && (
+                      <>
+                        <div className="chat-action-header">
+                          <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>Action: Draft Reply {isReopenable && <span style={{fontSize: '9px', textTransform: 'none', marginLeft: 'auto', opacity: 0.7}}>(Click to reopen)</span>}</span>
+                        </div>
+                        {act.args.replyBody && (
+                          <div className="chat-action-row" style={{ flexDirection: 'column', gap: '4px' }}>
+                            <span className="chat-action-label">Reply Message:</span>
+                            <div className="chat-action-body-preview">{act.args.replyBody}</div>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {act.name === 'filterInbox' && (
+                      <>
+                        <div className="chat-action-header">
+                          <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>Action: Filter Inbox</span>
+                        </div>
+                        <div style={{ marginTop: '4px' }}>
+                          {act.args.query && <span className="chat-action-badge">Search: "{act.args.query}"</span>}
+                          {act.args.sender && <span className="chat-action-badge">From: {act.args.sender}</span>}
+                          {act.args.unreadOnly && <span className="chat-action-badge">Unread Only</span>}
+                          {act.args.daysAgo && <span className="chat-action-badge">Last {act.args.daysAgo} Days</span>}
+                          {!act.args.query && !act.args.sender && !act.args.unreadOnly && !act.args.daysAgo && (
+                            <span className="chat-action-badge">Reset Filters</span>
+                          )}
+                        </div>
+                      </>
+                    )}
+
+                    {act.name === 'openEmail' && (
+                      <>
+                        <div className="chat-action-header">
+                          <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>Action: Open Email</span>
+                        </div>
+                        <div className="chat-action-row">
+                          <span className="chat-action-label">Keyword:</span>
+                          <span className="chat-action-value" style={{ fontStyle: 'italic' }}>"{act.args.keyword}"</span>
+                        </div>
+                      </>
+                    )}
+
+                    {act.name === 'sendEmail' && (
+                      <>
+                        <div className="chat-action-header">
+                          <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>Action: Send Email</span>
+                        </div>
+                        <div className="chat-action-row">
+                          <span className="chat-action-value" style={{ color: 'var(--text-muted)' }}>Triggering email dispatch...</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Backward compatibility fallback for string actions */}
+              {!msg.actions && msg.action && (
                 <div className="chat-bubble-action">
                   <span style={{ fontWeight: 600, color: 'white' }}>Action Executed:</span>
-                  <p style={{ marginTop: '2px' }}>{msg.action}</p>
+                  <p style={{ marginTop: '2px', fontSize: '11px', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>{msg.action}</p>
                 </div>
               )}
             </div>
             <span className="bubble-sender-label">
-              {msg.role === 'user' ? 'You' : 'Copilot'}
+              {msg.role === 'user' ? 'You' : 'AI Agent'}
             </span>
           </div>
         ))}
@@ -225,34 +327,23 @@ export default function AssistantPanel({
       <form onSubmit={handleSubmit} className="chat-input-form">
         <div className="input-row">
           
-          {/* Audio input button */}
+          <textarea 
+            ref={textareaRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={isGenerating}
+            placeholder="Send an email to John..."
+            className="chat-text-input"
+            rows={1}
+          />
           <button
-            type="button"
-            onClick={handleMicToggle}
-            className={`btn-mic ${isListening ? 'listening' : ''}`}
-            title={isListening ? "Listening... Click to Stop" : "Voice Command"}
+            type="submit"
+            disabled={isGenerating || !input.trim()}
+            className="btn-chat-send"
           >
-            {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            <CornerDownLeft className="w-4.5 h-4.5" />
           </button>
-
-          {/* Text Input */}
-          <div className="text-input-wrapper">
-            <input 
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              disabled={isGenerating}
-              placeholder={isListening ? "Listening..." : "Send an email to John..."}
-              className="chat-text-input"
-            />
-            <button
-              type="submit"
-              disabled={isGenerating || !input.trim()}
-              className="btn-chat-send"
-            >
-              <CornerDownLeft className="w-4.5 h-4.5" />
-            </button>
-          </div>
 
         </div>
 

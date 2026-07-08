@@ -1,89 +1,99 @@
-# Processity AI Mail - AI-Powered Mail Web Application
+# Processity AI Mail - AI-Powered Email Client
 
-Processity AI Mail is a premium, full-stack email client built with **React (Vite)** on the frontend and **Node.js (Express)** on the backend. The core of this application is an integrated **AI Assistant** that programmatically drives the email client's user interface using natural language (e.g. typing out drafts, navigating views, and applying search filters). 
+Processity AI Mail is a premium, full-stack email client designed around an **AI Agent UI-Controller**. Users can control the email interface using natural language (e.g. dictating drafts, searching, filtering, and opening emails), which the AI Agent executes in real-time.
 
-The app features a **vibrant, glassmorphic dark-mode UI** with responsive styling and real-time updates powered by WebSockets.
+Built with **Next.js 15** on the frontend, **Python FastAPI** on the backend, and powered by **OpenAI GPT-4o-mini**.
 
 ---
 
 ## Key Features
 
-1. **Dual-Mode Backend Architecture (Pragmatic Engineering)**:
-   - **Mock Mode (Default)**: Runs instantly out of the box with zero setup. Generates simulated incoming emails, logs mock sent receipts, and processes AI commands using a built-in local offline regex engine.
-   - **Real Mail Mode**: Instantly activates when credentials and API keys are provided. Logs in directly to your real email account (via **SMTP** for sending, and **IMAP** for reading and syncing in real-time).
-2. **AI UI-Controller (Gemini 1.5 Flash)**:
-   - Uses structural tool calling (function declarations) to allow the LLM to control frontend state.
-   - Assistant executes commands like: *“Compose to test@gmail.com”*, *“Show only unread emails”*, *“Open the email from David”*, or *“Reply saying I will review this specification”*.
-3. **Visibly Autofilled Fields**:
-   - When the AI assistant composes or replies, the composer window opens, and the fields are typed out character-by-character using a **simulated typing animation** with active cyan-glowing borders.
-4. **Human-in-the-Loop Safeguards (Bonus)**:
-   - Features a toggle to "Confirm Send". When active, the assistant drafts the message and asks for user confirmation via an approval card inside the chat sidebar before actually sending.
-5. **Real-time Mail Sync**:
-   - Listens to incoming mail in real-time using IMAP IDLE (Real Mode) or a simulated timer (Mock Mode) and pushes updates to the client via **WebSockets** without requiring page refreshes.
-6. **Threaded Conversation View (Bonus)**:
-   - Group emails under the same conversation using `threadId` headers.
-7. **Voice Commands (Bonus)**:
-   - Features web speech recognition (microphone button) in the chat panel to dictate commands.
+1. **AI UI-Controller (OpenAI GPT-4o-mini)**:
+   - Uses OpenAI's official Tools (Function Calling) API to map natural language prompts to frontend state changes.
+   - Executes UI actions like composing, replying, filtering inbox emails, and opening mail details.
+2. **Accelerated Typing Simulation**:
+   - When the AI Agent drafts an email, fields are filled out character-by-character using an **accelerated visual typing animation** featuring active cyan-glowing focus borders.
+3. **Persistent Chat Sessions**:
+   - Saves conversations to the browser's `localStorage` so active chat histories survive page refreshes.
+   - Includes a **Trash** icon in the sidebar header to clear history and start fresh.
+4. **Dual-Mode Backend Architecture**:
+   - **Mock Mode**: Runs instantly out of the box with zero configuration using a local offline rule parser.
+   - **Real Mode**: Connects directly to real email servers (via **IMAP** over SSL for reading/syncing and **SMTP** for sending).
+5. **Human-in-the-Loop Safeguards**:
+   - Features a "Confirm Send" toggle that intercepts outbound emails, forcing the assistant to present an approval card in the chat panel before sending.
+6. **Real-time Synchronization**:
+   - Syncs incoming mail in real-time via **WebSockets** push updates, instantly notifying the UI.
+7. **Threaded Conversation Routing**:
+   - Automatically groups replies and original messages into clean discussion threads using standard mail headers.
 
 ---
 
 ## Technology Stack
 
-- **Frontend**: React 19, Vite, Lucide Icons, Vanilla CSS (Custom Glassmorphic System)
-- **Backend**: Node.js (Express), WebSockets (`ws`), Nodemailer (SMTP), `imap-simple` (IMAP Client), Google Generative AI Node SDK (`@google/generative-ai`)
+- **Frontend**: Next.js 15 (App Router), React 19, Lucide Icons, CSS Variables (Custom Dark Theme)
+- **Backend**: Python 3.10+, FastAPI, SQLAlchemy (ORM), Uvicorn
+- **Database**: PostgreSQL (Production) / SQLite (Local Fallback)
+- **AI Integration**: OpenAI Python SDK (`gpt-4o-mini` with native Tool Calling)
 
 ---
 
 ## Setup & Local Run Instructions
 
-### Prerequisites
-- **Node.js** (v18 or higher recommended. Developed & tested on v22.19.0)
-- **npm** (v10 or higher. Developed & tested on v11.6.0)
+### 1. Backend Setup
+Navigate to the `backend` directory:
+1. Create and activate a Python virtual environment:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: .\venv\Scripts\activate
+   ```
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Create a `.env` file inside the `backend` directory:
+   ```env
+   OPENAI_API_KEY=your-openai-key
+   DATABASE_URL=sqlite:///./processity.db  # SQLite local database
+   EMAIL_USER=your-email@gmail.com
+   EMAIL_PASSWORD=your-app-password
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=465
+   IMAP_HOST=imap.gmail.com
+   IMAP_PORT=993
+   ```
+4. Run the FastAPI server:
+   ```bash
+   uvicorn backend.main:app --reload --port 8000
+   ```
 
-### 1. Installation
-In the root directory of the project, run:
-```bash
-npm run install:all
-```
-This script automatically installs the root dependencies and then runs local installations in both `backend` and `frontend` folders.
-
-### 2. Configure Environment Variables (Optional)
-To test the real-world SMTP/IMAP integration and LLM capabilities, copy the example environment file inside the `backend` folder:
-```bash
-cp backend/.env.example backend/.env
-```
-Fill out the variables:
-- `GEMINI_API_KEY`: Your Gemini API key.
-- `EMAIL_USER`: Your email address (e.g. `your-address@gmail.com`).
-- `EMAIL_PASSWORD`: An **App Password** generated from your email account settings.
-
-*Note: You can also update these credentials dynamically inside the UI using the **Connection Settings** modal.*
-
-### 3. Run the Application
-Start both the backend and frontend servers in development mode:
-```bash
-npm run dev
-```
-- **Frontend** will be running at `http://localhost:5173/` (or next available port).
-- **Backend** will be running at `http://localhost:3001/` (WebSockets bound here).
-
----
-
-## Architecture Decisions & Trade-Offs
-
-### Custom AI Agent UI-Controller Pattern
-- **Decision**: We implemented a custom state-driven tool-calling connection between our Express backend and React state instead of third-party frameworks like CopilotKit.
-- **Trade-off/Rationale**: Building a custom solution reduced the dependency size by ~100MB and eliminated potential runtime version conflicts with React 19. It gives us absolute, transparent control over form animations, filters, and intercepting the "Human-in-the-Loop" confirmations.
-
-### Dynamic Settings & Dual-Mode Fallback
-- **Decision**: Implemented a Mock mode that falls back to regular expression rules when no LLM key or email credentials are present.
-- **Rationale**: Provides an instantly interactive developer experience. A "Simulate Incoming Email" button is provided to demonstrate WebSocket push updates.
+### 2. Frontend Setup
+Navigate to the `frontend` directory:
+1. Install node dependencies:
+   ```bash
+   npm install
+   ```
+2. Start the Next.js development server:
+   ```bash
+   npm run dev
+   ```
+   The application will be accessible at `http://localhost:3000`.
 
 ---
 
-## What I'd Improve With More Time
+## Engineering Decisions & Trade-Offs
 
-1. **SQLite Database Sync**: Store emails locally in a sqlite database on the backend instead of keeping it in memory. This would allow caching, offline search, and instant loads.
-2. **Drafts Auto-save**: Save draft states to the server in real-time as the user or AI writes, allowing resumption on other sessions.
-3. **Advanced Thread Nesting**: Render threads in a clean tree hierarchy showing branch points in long conversation threads.
-4. **OAuth 2.0 Integration**: Build a full Google OAuth consent loop for Gmail rather than using App Passwords.
+### Custom WebSocket State Bridge
+- **Decision**: Rather than using heavy pre-built agent UI frameworks, we engineered a custom lightweight WebSocket bridge between the FastAPI backend and Next.js page state.
+- **Rationale**: This gives us fine-grained control over typing animations, local state fallbacks, and the Human-in-the-Loop approval interception panel without overhead.
+
+### Resilient Local Fallback
+- **Decision**: The backend detects if API keys or server credentials are missing and falls back to a regex-based local parser.
+- **Rationale**: Ensures the project remains fully browsable and interactive immediately after cloning, even before setting up environment keys.
+
+---
+
+## Next Development Steps
+
+1. **Google OAuth 2.0 Flow**: Migrate from SMTP/IMAP App Passwords to an OAuth 2.0 consent loop for Gmail/Outlook accounts.
+2. **Draft Autosave**: Periodically save composer states to the local database to prevent losing drafts if the tab is closed.
+3. **Advanced Thread Nesting**: Render threaded conversations in a tree visualizer displaying multi-reply branching.

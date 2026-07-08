@@ -14,6 +14,9 @@ const getBackendUrl = () => {
     if (process.env.NEXT_PUBLIC_API_URL) {
       return process.env.NEXT_PUBLIC_API_URL;
     }
+    if (window.location.hostname === 'processity.karventhan.online') {
+      return 'https://processity-api.karventhan.online';
+    }
     return `${window.location.protocol}//${window.location.hostname}:8000`;
   }
   return 'http://localhost:8000';
@@ -23,6 +26,9 @@ const getWsUrl = () => {
   if (typeof window !== 'undefined') {
     if (process.env.NEXT_PUBLIC_WS_URL) {
       return process.env.NEXT_PUBLIC_WS_URL;
+    }
+    if (window.location.hostname === 'processity.karventhan.online') {
+      return 'wss://processity-api.karventhan.online/ws';
     }
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     return `${wsProtocol}//${window.location.hostname}:8000/ws`;

@@ -1,4 +1,3 @@
-import os
 import uuid
 import datetime
 import asyncio
@@ -10,7 +9,7 @@ from email.mime.text import MIMEText
 import aiosmtplib
 from sqlalchemy.orm import Session
 
-from .database import SessionLocal, engine
+from .database import SessionLocal
 from .models import EmailRecord, EmailConfig
 
 class MailService:
@@ -217,7 +216,7 @@ class MailService:
                     break
                 
                 print("MailService: Syncing/Checking IMAP inbox...")
-                emails = await self.fetch_emails(force_sync=True)
+                await self.fetch_emails(force_sync=True)
                 
                 # Check if there are new unread emails relative to what was already cached
                 # Trigger callback if a new one is received.
@@ -322,7 +321,7 @@ class MailService:
                             content_disposition = str(part.get("Content-Disposition"))
                             try:
                                 part_body = part.get_payload(decode=True).decode(errors="ignore")
-                            except:
+                            except Exception:
                                 continue
                             if content_type == "text/plain" and "attachment" not in content_disposition:
                                 body += part_body
@@ -332,7 +331,7 @@ class MailService:
                         content_type = msg.get_content_type()
                         try:
                             part_body = msg.get_payload(decode=True).decode(errors="ignore")
-                        except:
+                        except Exception:
                             part_body = ""
                         if content_type == "text/plain":
                             body = part_body
@@ -350,7 +349,7 @@ class MailService:
                             parsed_date = email.utils.parsedate_to_datetime(date_str)
                             # Convert to naive UTC
                             parsed_date = parsed_date.astimezone(datetime.timezone.utc).replace(tzinfo=None)
-                        except:
+                        except Exception:
                             pass
 
                     # Parse message ID

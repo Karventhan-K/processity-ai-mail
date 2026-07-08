@@ -1,12 +1,14 @@
 import os
-from dotenv import load_dotenv
-load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 import json
 import asyncio
 from typing import List, Dict, Any, Optional
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, HTTPException, Body
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from dotenv import load_dotenv
+
+# Load environment variables before importing local modules that read environment variables on import
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 from .database import engine, Base, SessionLocal
 from .models import EmailConfig

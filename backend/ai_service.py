@@ -185,7 +185,7 @@ class AIService:
                 "name": "openComposeView",
                 "args": {"to": to, "subject": subject, "body": body}
             })
-            reply = f"I've opened the composer to draft an email for you."
+            reply = "I've opened the composer to draft an email for you."
 
         # 2. Reply to Email
         elif "reply" in text or "respond" in text:

@@ -40,3 +40,7 @@ htmlcov/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Databases
+*.db
+processity.db

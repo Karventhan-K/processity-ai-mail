@@ -10,10 +10,10 @@ from dotenv import load_dotenv
 # Load environment variables before importing local modules that read environment variables on import
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
-from .database import engine, Base, SessionLocal
-from .models import EmailConfig
-from .mail_service import mail_service
-from .ai_service import ai_service
+from .database import engine, Base, SessionLocal  # noqa: E402
+from .models import EmailConfig  # noqa: E402
+from .mail_service import mail_service  # noqa: E402
+from .ai_service import ai_service  # noqa: E402
 
 app = FastAPI(title="Processity AI Mail Backend")
 

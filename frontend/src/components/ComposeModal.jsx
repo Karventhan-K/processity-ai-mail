@@ -125,32 +125,43 @@ export default function ComposeModal({
   const isSuccess   = sendState === 'success';
 
   // -------------------------------------------------------
-  // Form submit with animated send button
+  // Form submit — Optimistic send pattern
+  //
+  // Problem with awaiting onSend(): the parent's callback
+  // doesn't return the promise, so await resolves instantly
+  // but the parent keeps the modal open until the API finishes
+  // (can be 1–3 seconds).
+  //
+  // Fix: fire the API call (don't await), immediately show
+  // the success animation, then close the modal ourselves
+  // after a short delay. The parent's toast handles errors.
   // -------------------------------------------------------
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
 
     // Guard: don't send while AI is typing or already sending
     if (!isFormReady || isTyping || isSending) return;
 
-    // 1. Set loading state on the button
+    // Step 1: Show sending spinner
     setSendState('sending');
 
-    try {
-      // 2. Call the parent send handler (async)
-      await onSend({ to, subject, body });
+    // Step 2: Fire the API call — fire and forget
+    // The parent (page.js) shows toast on success/failure
+    onSend({ to, subject, body });
 
-      // 3. Flash green success state briefly before closing
+    // Step 3: After brief "Sending..." show, flash green "Sent!"
+    setTimeout(() => {
       setSendState('success');
-      setTimeout(() => {
-        setSendState('idle');
-      }, 800);
 
-    } catch {
-      // If sending failed, reset back to idle
-      setSendState('idle');
-    }
+      // Step 4: Close the modal shortly after success flash
+      setTimeout(() => {
+        onClose();         // close popup fast
+        setSendState('idle'); // reset for next open
+      }, 550);           // 550ms success flash
+
+    }, 350);             // 350ms sending spinner duration
   };
+
 
   // Determine what the send button should look like
   const getSendButtonContent = () => {

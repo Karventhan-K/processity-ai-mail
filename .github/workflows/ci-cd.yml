@@ -98,7 +98,9 @@ jobs:
             # Navigate to cloned repository
             cd /home/${{ secrets.AWS_USER }}/processity-ai-mail
             
-            # Fetch latest changes from github
+            # Fetch latest changes from github cleanly
+            git reset --hard HEAD
+            git clean -fd
             git pull origin main
             
             # Write environment variables to backend/.env dynamically

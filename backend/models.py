@@ -39,4 +39,6 @@ class ApiLog(Base):
     endpoint = Column(String, index=True, nullable=False)
     method = Column(String, nullable=False)
     user_agent = Column(String, nullable=True)
+    metadata_json = Column(Text, nullable=True) # Stores full headers or request details JSON
     timestamp = Column(DateTime, default=datetime.utcnow)
+

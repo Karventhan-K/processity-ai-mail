@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Sparkles, RefreshCw, Check, ShieldAlert,
-  CornerDownLeft, Trash2,
+  CornerDownLeft, Trash2, X,
 } from 'lucide-react';
 
 /**
@@ -24,6 +24,9 @@ export default function AssistantPanel({
   pendingSendAction,
   onReopenCompose,
   onClearHistory,
+  // Mobile drawer props
+  isMobileOpen  = false,
+  onMobileClose = () => {},
 }) {
   const [input, setInput] = useState('');
   const [requireConfirmation, setRequireConfirmation] = useState(true);
@@ -80,7 +83,16 @@ export default function AssistantPanel({
   ];
 
   return (
-    <div className="assistant-sidebar">
+    <div className={`assistant-sidebar ${isMobileOpen ? 'drawer-open' : ''}`}>
+
+      {/* ---- Mobile Close Button (×) ---- */}
+      <button
+        className="drawer-close-btn"
+        onClick={onMobileClose}
+        title="Close AI Agent"
+      >
+        <X className="w-4 h-4" />
+      </button>
 
       {/* ---- Header ---- */}
       <div className="assistant-header">

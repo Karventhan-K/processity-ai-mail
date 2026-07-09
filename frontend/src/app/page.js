@@ -7,7 +7,7 @@ import EmailDetail from '../components/EmailDetail';
 import AssistantPanel from '../components/AssistantPanel';
 import ComposeModal from '../components/ComposeModal';
 import ConfigPanel from '../components/ConfigPanel';
-import { CheckCircle, ShieldAlert } from 'lucide-react';
+import { CheckCircle, ShieldAlert, Menu, Sparkles } from 'lucide-react';
 
 const getBackendUrl = () => {
   if (typeof window !== 'undefined') {
@@ -68,6 +68,16 @@ export default function App() {
   // Notification Toast state
   const [toast, setToast] = useState(null);
   const [isSimulatingMail, setIsSimulatingMail] = useState(false);
+
+  // Mobile drawer states
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen]     = useState(false);
+  const [isMobileAssistantOpen, setIsMobileAssistantOpen] = useState(false);
+
+  // Close all drawers (used by backdrop click)
+  const closeAllDrawers = () => {
+    setIsMobileSidebarOpen(false);
+    setIsMobileAssistantOpen(false);
+  };
 
   // Show dynamic custom toasts
   const showToast = (message, type = 'info') => {
@@ -543,7 +553,47 @@ export default function App() {
 
   return (
     <div className="app-container">
-      
+
+      {/* =============================================
+          MOBILE TOP BAR (only visible on ≤ 768px)
+          Left icon  → opens Sidebar drawer (left → right)
+          Right icon → opens AI Agent drawer (right → left)
+      ============================================== */}
+      <div className="mobile-topbar">
+        {/* Hamburger — opens sidebar */}
+        <button
+          className="mobile-topbar-btn"
+          onClick={() => setIsMobileSidebarOpen(true)}
+          title="Open navigation menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
+        {/* Brand center label */}
+        <div className="mobile-brand-center">
+          <Sparkles className="w-4 h-4" style={{ color: 'var(--accent-purple)' }} />
+          <span>Processity AI</span>
+        </div>
+
+        {/* AI Agent icon — opens assistant drawer */}
+        <button
+          className="mobile-topbar-btn ai-btn"
+          onClick={() => setIsMobileAssistantOpen(true)}
+          title="Open AI Agent"
+        >
+          <Sparkles className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* =============================================
+          MOBILE BACKDROP
+          Tapping it closes whichever drawer is open
+      ============================================== */}
+      <div
+        className={`mobile-drawer-backdrop ${isMobileSidebarOpen || isMobileAssistantOpen ? 'visible' : ''}`}
+        onClick={closeAllDrawers}
+      />
+
       {/* Dynamic Overlay Toasts */}
       {toast && (
         <div className={`toast-float toast-${toast.type}`}>
@@ -554,22 +604,29 @@ export default function App() {
       )}
 
       {/* Main Mail App Window */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <div className="main-content-area" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         
-        {/* Sidebar */}
-        <Sidebar 
-          currentFolder={currentFolder} 
+        {/* Sidebar — on mobile becomes a left-to-right drawer */}
+        <Sidebar
+          isMobileOpen={isMobileSidebarOpen}
+          onMobileClose={() => setIsMobileSidebarOpen(false)}
+          currentFolder={currentFolder}
           setCurrentFolder={(f) => {
             setCurrentFolder(f);
             setSelectedEmail(null);
+            setIsMobileSidebarOpen(false); // close drawer after navigation
           }}
           unreadCount={unreadCount}
           connectionMode={connectionMode}
-          onOpenConfig={() => setIsConfigOpen(true)}
+          onOpenConfig={() => {
+            setIsConfigOpen(true);
+            setIsMobileSidebarOpen(false);
+          }}
           onOpenCompose={() => {
             setComposeInitialData(null);
             setComposeAutoFillData(null);
             setIsComposeOpen(true);
+            setIsMobileSidebarOpen(false);
           }}
           onSimulateIncoming={handleSimulateIncoming}
           isSimulating={isSimulatingMail}
@@ -606,8 +663,10 @@ export default function App() {
 
       </div>
 
-      {/* AI Assistant Sidebar */}
-      <AssistantPanel 
+      {/* AI Assistant Sidebar — on mobile becomes a right-to-left drawer */}
+      <AssistantPanel
+        isMobileOpen={isMobileAssistantOpen}
+        onMobileClose={() => setIsMobileAssistantOpen(false)}
         messages={assistantMessages}
         onSendMessage={handleSendAssistantMessage}
         isGenerating={isAssistantGenerating}

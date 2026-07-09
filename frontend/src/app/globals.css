@@ -161,6 +161,29 @@ input, textarea {
   100% { background-position:  200% 0; }
 }
 
+/* Mobile drawer: sidebar slides in from left */
+@keyframes slide-in-left {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
+}
+
+/* Mobile drawer: AI panel slides in from right */
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+/* Drawer close — reverse directions */
+@keyframes slide-out-left {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-100%); }
+}
+
+@keyframes slide-out-right {
+  from { transform: translateX(0); }
+  to   { transform: translateX(100%); }
+}
+
 /* ---------------------------------------------------------
    5. UTILITY ICON SIZE HELPERS (Lucide icons)
    --------------------------------------------------------- */
@@ -2027,3 +2050,243 @@ input, textarea {
     max-width: 96vw;
   }
 }
+
+/* ==========================================================
+   17. MOBILE DRAWER SYSTEM (≤ 768px)
+
+   - Fixed top bar with brand name + two toggle icons
+   - Sidebar slides in from LEFT (left → right drawer)
+   - AI Assistant slides in from RIGHT (right → left drawer)
+   - Backdrop closes the active drawer
+   - Main email content fills full width
+   ========================================================== */
+
+/* ---- Mobile Top Bar ---- */
+.mobile-topbar {
+  display: none; /* hidden on desktop, shown via media query below */
+}
+
+/* ---- Backdrop (dimmed overlay behind open drawer) ---- */
+.mobile-drawer-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 98;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(3px);
+  animation: fade-in 0.2s ease;
+}
+
+.mobile-drawer-backdrop.visible {
+  display: block;
+}
+
+/* ---- Mobile: activate at ≤ 768px ---- */
+@media (max-width: 768px) {
+
+  /* Body resets for mobile drawer layout */
+  body {
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* ---- Mobile Top Navigation Bar ---- */
+  .mobile-topbar {
+    display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 54px;
+    z-index: 40;
+    background: #090b1c;
+    border-bottom: 1px solid var(--border-glass);
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    gap: 12px;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.4);
+  }
+
+  /* Hamburger / close icon button (left) */
+  .mobile-topbar-btn {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-glass);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .mobile-topbar-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  .mobile-topbar-btn:active {
+    transform: scale(0.93);
+  }
+
+  /* AI button gets a cyan accent */
+  .mobile-topbar-btn.ai-btn {
+    color: var(--accent-cyan);
+    background: rgba(6, 182, 212, 0.06);
+    border-color: rgba(6, 182, 212, 0.2);
+  }
+
+  .mobile-topbar-btn.ai-btn:hover {
+    background: rgba(6, 182, 212, 0.14);
+    border-color: rgba(6, 182, 212, 0.4);
+    box-shadow: 0 0 12px rgba(6, 182, 212, 0.15);
+  }
+
+  /* Center brand label in top bar */
+  .mobile-brand-center {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    justify-content: center;
+  }
+
+  .mobile-brand-center span {
+    font-family: var(--font-heading);
+    font-size: 15px;
+    font-weight: 700;
+    color: white;
+  }
+
+  /* ---- App Container: push content below top bar ---- */
+  .app-container {
+    padding-top: 54px;
+    min-width: unset !important;
+    flex-direction: row;  /* keep row so main area fills width */
+    overflow: hidden;
+  }
+
+  /* ---- Main content area fills full width ---- */
+  .main-content-area {
+    flex-direction: column !important;
+    overflow-y: auto;
+    width: 100%;
+  }
+
+  /* Email list takes full width on mobile */
+  .email-list {
+    width: 100% !important;
+    height: auto;
+    min-height: 45vh;
+    border-right: none;
+    border-bottom: 1px solid var(--border-glass);
+    flex-shrink: 0;
+  }
+
+  /* Email detail fills remaining space */
+  .email-detail {
+    min-height: 45vh;
+    flex: 1;
+  }
+
+  /* ---- Sidebar: hidden by default, becomes left drawer ---- */
+  .app-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 270px !important;
+    height: 100%;
+    z-index: 99;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Sidebar open — slide in from left */
+  .app-sidebar.drawer-open {
+    transform: translateX(0);
+    animation: slide-in-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* ---- Assistant: hidden by default, becomes right drawer ---- */
+  .assistant-sidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 300px !important;
+    height: 100%;
+    z-index: 99;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.5);
+    border-left: 1px solid var(--border-glass);
+  }
+
+  /* Assistant open — slide in from right */
+  .assistant-sidebar.drawer-open {
+    transform: translateX(0);
+    animation: slide-in-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* ---- Close button inside each drawer ---- */
+  .drawer-close-btn {
+    position: absolute;
+    top: 14px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border-glass);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 1;
+  }
+
+  .drawer-close-btn:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.25);
+    color: #ef4444;
+  }
+
+  /* Sidebar needs relative positioning for the close button */
+  .app-sidebar {
+    position: fixed;
+  }
+
+  /* Backdrop becomes visible when drawer is open */
+  .mobile-drawer-backdrop.visible {
+    display: block;
+  }
+}
+
+/* Desktop: hide mobile-only elements */
+@media (min-width: 769px) {
+  .mobile-topbar          { display: none !important; }
+  .mobile-drawer-backdrop { display: none !important; }
+  .drawer-close-btn       { display: none !important; }
+
+  /* Ensure drawers are NOT fixed on desktop */
+  .app-sidebar {
+    position: relative;
+    transform: none !important;
+    animation: none !important;
+  }
+
+  .assistant-sidebar {
+    position: relative;
+    transform: none !important;
+    animation: none !important;
+  }
+}
+

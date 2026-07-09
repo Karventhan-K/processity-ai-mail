@@ -1,11 +1,14 @@
 'use client';
 
 import React from 'react';
-import { Mail, Send, PenTool, Settings, Sparkles, RefreshCw, Layers } from 'lucide-react';
+import { Mail, Send, PenTool, Settings, Sparkles, RefreshCw, Layers, X } from 'lucide-react';
 
 /**
  * Sidebar — main navigation rail.
- * Contains: brand logo, compose button, folder nav, and footer controls.
+ *
+ * Desktop: Fixed left column (260px).
+ * Mobile:  Hidden by default. Slides in LEFT → RIGHT as a drawer
+ *          when `isMobileOpen` is true. A close (×) button dismisses it.
  */
 export default function Sidebar({
   currentFolder,
@@ -16,9 +19,21 @@ export default function Sidebar({
   onOpenCompose,
   onSimulateIncoming,
   isSimulating,
+  // Mobile drawer props
+  isMobileOpen  = false,
+  onMobileClose = () => {},
 }) {
   return (
-    <div className="app-sidebar">
+    <div className={`app-sidebar ${isMobileOpen ? 'drawer-open' : ''}`}>
+
+      {/* ---- Mobile Close Button (X) — only visible inside drawer ---- */}
+      <button
+        className="drawer-close-btn"
+        onClick={onMobileClose}
+        title="Close menu"
+      >
+        <X className="w-4 h-4" />
+      </button>
 
       {/* ---- Brand Header ---- */}
       <div className="sidebar-header">

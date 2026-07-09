@@ -93,15 +93,26 @@ class AIService:
         ]
 
     def configure(self, api_key: str = ""):
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY", "")
+        self.api_key = api_key or os.getenv("OPENAI_API_KEY") or os.getenv("GEMINI_API_KEY") or ""
         if self.api_key:
-            print("AIService: LLM configured successfully with OpenAI API Key.")
-            self.client = OpenAI(api_key=self.api_key)
-            self.model = "gpt-4o-mini"
+            if self.api_key.startswith("AIzaSy"):
+                print("AIService: LLM configured successfully with Google Gemini API Key.")
+                self.client = OpenAI(
+                    api_key=self.api_key,
+                    base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+                )
+                # Use Gemini 1.5 Flash which has native OpenAI compatibility support
+                self.model = "gemini-1.5-flash"
+            else:
+                print("AIService: LLM configured successfully with OpenAI API Key.")
+                self.client = OpenAI(api_key=self.api_key)
+                self.model = "gpt-4o-mini"
         else:
             print("AIService: No API Key found. Running in LOCAL fallback mode (regex).")
             self.client = None
             self.model = None
+
+
 
     async def process_message(self, user_message: str, chat_history: list = None, context: dict = None):
         if chat_history is None:
@@ -264,7 +275,7 @@ class AIService:
             reply = "I've drafted a reply to the open email."
 
         # 3. Navigate & Open
-        elif any(w in text for w in ["open", "read", "show email", "view email"]):
+        elif any(w in text.split() for w in ["open", "read", "view"]) or "show email" in text or "view email" in text:
             keyword = ""
             open_match = re.search(r"(?:open|read|view)\s+(?:the\s+)?(?:email\s+)?(?:from|about|with\s+subject\s+)?['\"]([^'\"]+)['\"]", message, re.IGNORECASE)
             if open_match:

@@ -8,9 +8,11 @@ export default function EmailDetail({ email, allEmails, onReplyClick }) {
   if (!email) {
     return (
       <div className="detail-empty animate-fade-in">
-        <MailOpen className="w-12 h-12 text-gray-700 mb-3" />
-        <h3 className="text-lg font-medium text-gray-400">Select an email to read</h3>
-        <p className="text-xs text-gray-500 max-w-sm mt-1">
+        <MailOpen className="w-12 h-12" style={{ color: 'var(--text-muted)', opacity: 0.6 }} />
+        <h3 style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)', marginTop: '8px' }}>
+          Select an email to read
+        </h3>
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)', maxWidth: '260px', marginTop: '4px', lineHeight: '1.5' }}>
           Click on any email in the list, or tell the AI assistant to open a specific email for you.
         </p>
       </div>

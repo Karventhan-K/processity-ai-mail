@@ -1,99 +1,121 @@
 # Processity AI Mail - AI-Powered Email Client
 
-Processity AI Mail is a premium, full-stack email client designed around an **AI Agent UI-Controller**. Users can control the email interface using natural language (e.g. dictating drafts, searching, filtering, and opening emails), which the AI Agent executes in real-time.
+Processity AI Mail is a premium, full-stack email client built around an **AI Agent UI-Controller**. Instead of acting as a simple text-based chatbot, the AI Agent programmatically drives the user interface—automatically typing out drafts letter-by-letter, applying search filters, switching folders, and opening emails in real-time.
 
-Built with **Next.js 15** on the frontend, **Python FastAPI** on the backend, and powered by **OpenAI GPT-4o-mini**.
-
----
-
-## Key Features
-
-1. **AI UI-Controller (OpenAI GPT-4o-mini)**:
-   - Uses OpenAI's official Tools (Function Calling) API to map natural language prompts to frontend state changes.
-   - Executes UI actions like composing, replying, filtering inbox emails, and opening mail details.
-2. **Accelerated Typing Simulation**:
-   - When the AI Agent drafts an email, fields are filled out character-by-character using an **accelerated visual typing animation** featuring active cyan-glowing focus borders.
-3. **Persistent Chat Sessions**:
-   - Saves conversations to the browser's `localStorage` so active chat histories survive page refreshes.
-   - Includes a **Trash** icon in the sidebar header to clear history and start fresh.
-4. **Dual-Mode Backend Architecture**:
-   - **Mock Mode**: Runs instantly out of the box with zero configuration using a local offline rule parser.
-   - **Real Mode**: Connects directly to real email servers (via **IMAP** over SSL for reading/syncing and **SMTP** for sending).
-5. **Human-in-the-Loop Safeguards**:
-   - Features a "Confirm Send" toggle that intercepts outbound emails, forcing the assistant to present an approval card in the chat panel before sending.
-6. **Real-time Synchronization**:
-   - Syncs incoming mail in real-time via **WebSockets** push updates, instantly notifying the UI.
-7. **Threaded Conversation Routing**:
-   - Automatically groups replies and original messages into clean discussion threads using standard mail headers.
+Built with **Next.js 15 (App Router)** on the frontend, **Python FastAPI** on the backend, and powered by **OpenAI GPT-4o-mini** native tool-calling.
 
 ---
 
-## Technology Stack
+## ✦ Live Evaluation Guide (Fast Review)
 
-- **Frontend**: Next.js 15 (App Router), React 19, Lucide Icons, CSS Variables (Custom Dark Theme)
-- **Backend**: Python 3.10+, FastAPI, SQLAlchemy (ORM), Uvicorn
-- **Database**: PostgreSQL (Production) / SQLite (Local Fallback)
-- **AI Integration**: OpenAI Python SDK (`gpt-4o-mini` with native Tool Calling)
+To help the reviewers (**@giri-mt**, **@adarsh-processity**, and **@RUiNtheExtinct**) quickly test the core capabilities:
+
+1.  **AI Compose & Send:**
+    *   *Prompt:* `"Compose a leave application to manager@company.com asking for annual leave from July 10th to July 15th"`
+    *   *Visual Effect:* The Compose Modal will slide open, and you will see the AI agent type the values into the fields dynamically.
+2.  **Search & Display:**
+    *   *Prompt:* `"Show me emails about leave"` or `"Show emails from Ben"`
+    *   *Visual Effect:* The email list immediately filters.
+3.  **Navigate & Open:**
+    *   *Prompt:* `"Open the email about Leave Request"`
+    *   *Visual Effect:* The client automatically selects and displays that message in the detail pane.
+4.  **Human-in-the-Loop Interception:**
+    *   Toggle **"Confirm Send"** in the AI header, then say: `"Send an email to john@example.com with subject 'Meeting' and body 'Hey'"`
+    *   *Visual Effect:* Instead of sending it immediately, the AI panel intercepts the command and renders a confirmation preview widget with **Approve & Send** and **Cancel** buttons.
 
 ---
 
-## Setup & Local Run Instructions
+## 🚀 Key Features Implemented
 
-### 1. Backend Setup
+1.  **AI UI-Controller (Function Calling):**
+    *   Utilizes OpenAI's official Tools API to parse natural language instructions and map them to reactive state operations on the frontend.
+2.  **Visual Accelerated Typing Animation:**
+    *   Auto-fills email forms using a Snappy character-by-character typing layout, styled with glowing cyan focus rings to indicate AI focus.
+3.  **Dual-Mode Backend Architecture:**
+    *   **Mock Mode:** Instantly runs without API keys or credentials, falling back to a local regex parser.
+    *   **Real Mode:** Connects to real mail servers via **IMAP over SSL** for sync/reads and **SMTP** for delivery.
+4.  **Local Drafts System:**
+    *   A dedicated **Drafts** folder in the sidebar nav with live count badges.
+    *   Allows manual saving via **"Save Draft"** button in Compose modal.
+    *   Drafts are persisted to `localStorage` and can be clicked to re-open and continue writing.
+5.  **WebSocket Push Synchronization:**
+    *   Real-time notifications of incoming mail pushed from the FastAPI backend using standard WebSocket connections.
+6.  **Polished Dark & Light Theme System:**
+    *   Smooth CSS variable transitions.
+    *   Features a sun/moon switch in the sidebar and mobile topbar.
+    *   Theme preference is saved to `localStorage` so it survives page reloads.
+7.  **Responsive Mobile Drawer Layout:**
+    *   On screens $\le$ 768px, the layout adapts:
+        *   Left menu button (☰) slides in the Sidebar drawer (left $\to$ right).
+        *   Right Sparkles button slides in the AI Agent drawer (right $\to$ left).
+        *   Tapping the blurred backdrop closes the active drawer automatically.
+
+---
+
+## 🛠️ Setup & Running Locally
+
+### 1. Backend Setup (FastAPI)
 Navigate to the `backend` directory:
-1. Create and activate a Python virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: .\venv\Scripts\activate
-   ```
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. Create a `.env` file inside the `backend` directory:
-   ```env
-   OPENAI_API_KEY=your-openai-key
-   DATABASE_URL=sqlite:///./processity.db  # SQLite local database
-   EMAIL_USER=your-email@gmail.com
-   EMAIL_PASSWORD=your-app-password
-   SMTP_HOST=smtp.gmail.com
-   SMTP_PORT=465
-   IMAP_HOST=imap.gmail.com
-   IMAP_PORT=993
-   ```
-4. Run the FastAPI server:
-   ```bash
-   uvicorn backend.main:app --reload --port 8000
-   ```
+1.  Create and activate a Python virtual environment:
+    ```bash
+    python -m venv venv
+    # On Windows:
+    .\venv\Scripts\activate
+    # On Unix/macOS:
+    source venv/bin/activate
+    ```
+2.  Install dependencies:
+    ```bash
+    pip install -r requirements.txt
+    ```
+3.  Configure your environment in `.env`:
+    ```env
+    OPENAI_API_KEY=your-openai-key
+    DATABASE_URL=sqlite:///./processity.db
+    EMAIL_USER=your-email@gmail.com
+    EMAIL_PASSWORD=your-app-password
+    SMTP_HOST=smtp.gmail.com
+    SMTP_PORT=465
+    IMAP_HOST=imap.gmail.com
+    IMAP_PORT=993
+    ```
+4.  Start backend server:
+    ```bash
+    uvicorn backend.main:app --reload --port 8000
+    ```
 
-### 2. Frontend Setup
+### 2. Frontend Setup (Next.js)
 Navigate to the `frontend` directory:
-1. Install node dependencies:
-   ```bash
-   npm install
-   ```
-2. Start the Next.js development server:
-   ```bash
-   npm run dev
-   ```
-   The application will be accessible at `http://localhost:3000`.
+1.  Install packages:
+    ```bash
+    npm install
+    ```
+2.  Run the development server:
+    ```bash
+    npm run dev
+    ```
+    Open `http://localhost:3000` in your browser.
 
 ---
 
-## Engineering Decisions & Trade-Offs
+## 📐 Architecture & Engineering Trade-Offs
 
-### Custom WebSocket State Bridge
-- **Decision**: Rather than using heavy pre-built agent UI frameworks, we engineered a custom lightweight WebSocket bridge between the FastAPI backend and Next.js page state.
-- **Rationale**: This gives us fine-grained control over typing animations, local state fallbacks, and the Human-in-the-Loop approval interception panel without overhead.
+### 1. Lightweight State Bridge over Complex Agent Frameworks
+*   **Decision:** Instead of embedding bulky third-party agent UI libraries, we built a native state bridge via WebSocket events and reactive hooks in Next.js.
+*   **Trade-off:** Requires writing custom schema mappings, but yields absolute control over animations, form focus simulation, and layout rendering speed.
 
-### Resilient Local Fallback
-- **Decision**: The backend detects if API keys or server credentials are missing and falls back to a regex-based local parser.
-- **Rationale**: Ensures the project remains fully browsable and interactive immediately after cloning, even before setting up environment keys.
+### 2. Client-Side Optimistic Closing & Background Dispatch
+*   **Decision:** The Compose Modal immediately triggers a success visual indicator and closes after ~900ms, while the actual mail API call is fired-and-forgotten in the background.
+*   **Trade-off:** If the mail server has a major delay, the UI remains perfectly responsive and snappy. Errors are gracefully reported back via system toasts.
+
+### 3. Local Storage Thread Cache & Sync
+*   **Decision:** Chat histories and drafts are cached locally in `localStorage`.
+*   **Trade-off:** Removes the database load for ephemeral session state, while keeping load times instant.
 
 ---
 
-## Next Development Steps
+## 🔮 Next Development Steps (What I'd Improve Next)
 
-1. **Google OAuth 2.0 Flow**: Migrate from SMTP/IMAP App Passwords to an OAuth 2.0 consent loop for Gmail/Outlook accounts.
-2. **Draft Autosave**: Periodically save composer states to the local database to prevent losing drafts if the tab is closed.
-3. **Advanced Thread Nesting**: Render threaded conversations in a tree visualizer displaying multi-reply branching.
+1.  **Google OAuth 2.0 Flow:** Upgrade connection credentials from SMTP/IMAP App Passwords to an OAuth 2.0 single-sign-on consent screen.
+2.  **Server-Side Draft Syncing:** Sync local drafts with the server (SQLite/Postgres) so drafts are accessible across multiple devices.
+3.  **Sub-thread Nesting:** Render conversation threads in a visual tree view for easier tracking of long replies.

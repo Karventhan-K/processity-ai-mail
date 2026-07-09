@@ -53,10 +53,17 @@ async def log_requests(request: Request, call_next):
     method = request.method
     user_agent = request.headers.get("user-agent", "unknown")
 
+    # Capture headers as JSON (redacting secrets)
+    headers_dict = dict(request.headers.items())
+    for k in list(headers_dict.keys()):
+        if any(sec in k.lower() for sec in ["auth", "cookie", "key", "password"]):
+            headers_dict[k] = "[REDACTED]"
+    headers_json = json.dumps(headers_dict)
+
     # Proceed with request
     response = await call_next(request)
 
-    # Save to DB in background so we don't slow down the main thread
+    # Save to DB in background
     # Only log requests to actual API endpoints, not WebSocket or static/docs
     if endpoint.startswith("/api") and endpoint != "/api/logs":
         db = SessionLocal()
@@ -65,7 +72,8 @@ async def log_requests(request: Request, call_next):
                 ip_address=ip,
                 endpoint=endpoint,
                 method=method,
-                user_agent=user_agent
+                user_agent=user_agent,
+                metadata_json=headers_json
             )
             db.add(log_entry)
             db.commit()
@@ -349,6 +357,56 @@ async def chat_assistant(data: ChatInput):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+class VisitLogInput(BaseModel):
+    screen_resolution: Optional[str] = None
+    language: Optional[str] = None
+    referrer: Optional[str] = None
+    current_url: Optional[str] = None
+
+@app.post("/api/log-visit")
+async def log_visit(data: VisitLogInput, request: Request):
+    # Get client IP
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        ip = forwarded_for.split(",")[0].strip()
+    else:
+        ip = request.client.host if request.client else "unknown"
+
+    user_agent = request.headers.get("user-agent", "unknown")
+
+    # Serialize visitor details combined with browser metadata
+    metadata = {
+        "screen_resolution": data.screen_resolution,
+        "language": data.language,
+        "referrer": data.referrer,
+        "current_url": data.current_url,
+        "headers": dict(request.headers.items())
+    }
+    # Redact sensitive keys
+    for k in list(metadata["headers"].keys()):
+        if any(sec in k.lower() for sec in ["auth", "cookie", "key", "password"]):
+            metadata["headers"][k] = "[REDACTED]"
+
+    db = SessionLocal()
+    try:
+        log_entry = ApiLog(
+            ip_address=ip,
+            endpoint="/frontend_view",
+            method="POST",
+            user_agent=user_agent,
+            metadata_json=json.dumps(metadata)
+        )
+        db.add(log_entry)
+        db.commit()
+        return {"success": True}
+    except Exception as e:
+        print(f"Failed to log frontend visit: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
+
+
 @app.get("/api/logs")
 def get_api_logs(limit: int = 100):
     db = SessionLocal()
@@ -363,6 +421,7 @@ def get_api_logs(limit: int = 100):
                     "endpoint": l.endpoint,
                     "method": l.method,
                     "user_agent": l.user_agent,
+                    "metadata": json.loads(l.metadata_json) if l.metadata_json else {},
                     "timestamp": l.timestamp.isoformat()
                 }
                 for l in logs

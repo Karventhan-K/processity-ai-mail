@@ -164,6 +164,29 @@ export default function App() {
     fetchConfig();
     fetchEmails();
 
+    // Log frontend visit with client-side details
+    const logFrontendVisit = async () => {
+      try {
+        if (typeof window === 'undefined') return;
+        const payload = {
+          screen_resolution: `${window.screen?.width || 0}x${window.screen?.height || 0}`,
+          language: navigator.language || '',
+          referrer: document.referrer || '',
+          current_url: window.location?.href || '',
+        };
+        await fetch(`${BACKEND_URL}/api/log-visit`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+      } catch (e) {
+        console.error("Failed to log visit:", e);
+      }
+    };
+    logFrontendVisit();
+
     // Load saved assistant messages on mount
     if (typeof window !== 'undefined') {
       const savedMessages = localStorage.getItem('processity_chat_history');

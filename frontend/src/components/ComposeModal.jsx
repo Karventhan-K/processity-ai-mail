@@ -1,28 +1,39 @@
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
-import { X, Send, Sparkles } from 'lucide-react';
 
-export default function ComposeModal({ 
-  isOpen, 
-  onClose, 
-  onSend, 
-  initialData = null, 
-  autoFillData = null, 
-  onAutoFillComplete = null 
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Send, Sparkles, CheckCircle, Loader2 } from 'lucide-react';
+
+/**
+ * ComposeModal — email compose/reply popup with:
+ *   - AI auto-type animation (letter-by-letter fill)
+ *   - Send button loading state + success flash
+ *   - Clean form layout with proper validation
+ */
+export default function ComposeModal({
+  isOpen,
+  onClose,
+  onSend,
+  initialData = null,
+  autoFillData = null,
+  onAutoFillComplete = null,
 }) {
   const [to, setTo] = useState('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
-  
-  // Track which fields are actively being typed by AI
+
+  // Which field the AI is currently typing into
   const [activeTypingField, setActiveTypingField] = useState(null);
 
-  // Keep references to inputs for selection/focus effects
-  const toRef = useRef(null);
-  const subjectRef = useRef(null);
-  const bodyRef = useRef(null);
+  // Track send button state: 'idle' | 'sending' | 'success'
+  const [sendState, setSendState] = useState('idle');
 
-  // Reset fields when opening/closing or changing initialData (for replies)
+  const toRef      = useRef(null);
+  const subjectRef = useRef(null);
+  const bodyRef    = useRef(null);
+
+  // -------------------------------------------------------
+  // Reset fields when modal opens / initialData changes
+  // -------------------------------------------------------
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
@@ -35,54 +46,64 @@ export default function ComposeModal({
         setBody('');
       }
       setActiveTypingField(null);
+      setSendState('idle');
     }
   }, [isOpen, initialData]);
 
-  // AI Auto-Typing Simulation Effect
+  // -------------------------------------------------------
+  // AI auto-typing simulation effect
+  // Fills fields one character-chunk at a time to look like
+  // the AI is actually typing into the form.
+  // -------------------------------------------------------
   useEffect(() => {
     if (!isOpen || !autoFillData) return;
 
     const { to: targetTo, subject: targetSubject, body: targetBody } = autoFillData;
-    
-    // Clear fields to start animation fresh
+
+    // Clear all fields to restart
     setTo('');
     setSubject('');
     setBody('');
+    setSendState('idle');
 
     let currentField = 'to';
-    let charIndex = 0;
-    
+    let charIndex    = 0;
+
     setActiveTypingField('to');
 
-    const typingSpeed = 12; // Snappy typing speed
+    // 12ms interval = ~80 chars/sec for a snappy feel
+    const typingSpeed = 12;
 
     const interval = setInterval(() => {
       if (currentField === 'to') {
         if (targetTo && charIndex < targetTo.length) {
-          const chunk = targetTo.slice(charIndex, charIndex + 2);
-          setTo(prev => prev + chunk);
+          // Type 2 characters at a time
+          setTo(prev => prev + targetTo.slice(charIndex, charIndex + 2));
           charIndex += 2;
         } else {
+          // Move to next field
           currentField = 'subject';
-          charIndex = 0;
+          charIndex    = 0;
           setActiveTypingField('subject');
         }
+
       } else if (currentField === 'subject') {
         if (targetSubject && charIndex < targetSubject.length) {
-          const chunk = targetSubject.slice(charIndex, charIndex + 2);
-          setSubject(prev => prev + chunk);
+          setSubject(prev => prev + targetSubject.slice(charIndex, charIndex + 2));
           charIndex += 2;
         } else {
           currentField = 'body';
-          charIndex = 0;
+          charIndex    = 0;
           setActiveTypingField('body');
         }
+
       } else if (currentField === 'body') {
         if (targetBody && charIndex < targetBody.length) {
-          const chunk = targetBody.slice(charIndex, charIndex + 6);
-          setBody(prev => prev + chunk);
+          // Type 6 chars at a time for the body (longer text)
+          setBody(prev => prev + targetBody.slice(charIndex, charIndex + 6));
           charIndex += 6;
         } else {
+          // Done typing — clean up
           clearInterval(interval);
           setActiveTypingField(null);
           if (onAutoFillComplete) {
@@ -93,111 +114,203 @@ export default function ComposeModal({
     }, typingSpeed);
 
     return () => clearInterval(interval);
-
   }, [isOpen, autoFillData]);
 
+  // Don't render at all when closed
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const isTyping    = activeTypingField !== null;
+  const isFormReady = to.trim() && subject.trim() && body.trim();
+  const isSending   = sendState === 'sending';
+  const isSuccess   = sendState === 'success';
+
+  // -------------------------------------------------------
+  // Form submit with animated send button
+  // -------------------------------------------------------
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!to || !subject || !body) return;
-    onSend({ to, subject, body });
+
+    // Guard: don't send while AI is typing or already sending
+    if (!isFormReady || isTyping || isSending) return;
+
+    // 1. Set loading state on the button
+    setSendState('sending');
+
+    try {
+      // 2. Call the parent send handler (async)
+      await onSend({ to, subject, body });
+
+      // 3. Flash green success state briefly before closing
+      setSendState('success');
+      setTimeout(() => {
+        setSendState('idle');
+      }, 800);
+
+    } catch {
+      // If sending failed, reset back to idle
+      setSendState('idle');
+    }
   };
+
+  // Determine what the send button should look like
+  const getSendButtonContent = () => {
+    if (isSending) {
+      return (
+        <>
+          <span className="spinner" />
+          <span>Sending...</span>
+        </>
+      );
+    }
+    if (isSuccess) {
+      return (
+        <>
+          <CheckCircle className="w-4 h-4" />
+          <span>Sent!</span>
+        </>
+      );
+    }
+    return (
+      <>
+        <Send className="w-4 h-4" />
+        <span>Send Email</span>
+      </>
+    );
+  };
+
+  const sendButtonClass = [
+    'btn-compose-send',
+    isSending  ? 'is-sending'   : '',
+    isSuccess  ? 'send-success' : '',
+  ].filter(Boolean).join(' ');
 
   return (
     <div className="modal-overlay">
       <div className="modal-box modal-box-large">
-        
-        {/* Header */}
+
+        {/* ---- Header ---- */}
         <div className="modal-header">
           <div className="modal-header-left">
-            <Sparkles className="w-5 h-5" style={{ color: activeTypingField ? 'var(--accent-cyan)' : 'var(--accent-purple)' }} />
+            <Sparkles
+              className="w-5 h-5"
+              style={{ color: isTyping ? 'var(--accent-cyan)' : 'var(--accent-purple)' }}
+            />
             <h2 className="modal-title">
-              {activeTypingField ? 'AI Assistant is composing...' : initialData?.id ? 'Reply Email' : 'New Message'}
+              {isTyping
+                ? 'AI Assistant is composing...'
+                : initialData?.id
+                  ? 'Reply to Email'
+                  : 'New Message'
+              }
             </h2>
           </div>
-          <button onClick={onClose} className="btn-modal-close">
+
+          {/* Only allow close if not actively typing or sending */}
+          <button
+            onClick={onClose}
+            className="btn-modal-close"
+            disabled={isSending}
+            title="Close"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Form */}
+        {/* ---- Compose Form ---- */}
         <form onSubmit={handleSubmit} className="modal-form-content">
-          
-          {/* To Field */}
+
+          {/* To: field */}
           <div className={`compose-row-border ${activeTypingField === 'to' ? 'ai-filling-field' : ''}`}>
             <span className="compose-label">To:</span>
-            <input 
+            <input
               ref={toRef}
-              type="text" 
+              type="text"
               value={to}
               onChange={(e) => setTo(e.target.value)}
-              placeholder="recipient@domain.com"
-              disabled={!!initialData || activeTypingField !== null}
+              placeholder="recipient@example.com"
+              disabled={!!initialData || isTyping}
               className="compose-field-input"
             />
             {activeTypingField === 'to' && (
-              <span className="unread-badge" style={{ fontSize: '9px', textTransform: 'uppercase' }}>Autofilling...</span>
+              <span className="unread-badge" style={{ fontSize: '9px', textTransform: 'uppercase' }}>
+                Autofilling...
+              </span>
             )}
           </div>
 
-          {/* Subject Field */}
+          {/* Subject: field */}
           <div className={`compose-row-border ${activeTypingField === 'subject' ? 'ai-filling-field' : ''}`}>
             <span className="compose-label">Subject:</span>
-            <input 
+            <input
               ref={subjectRef}
-              type="text" 
+              type="text"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder="Enter subject line"
-              disabled={activeTypingField !== null}
+              disabled={isTyping}
               className="compose-field-input"
             />
             {activeTypingField === 'subject' && (
-              <span className="unread-badge" style={{ fontSize: '9px', textTransform: 'uppercase' }}>Autofilling...</span>
+              <span className="unread-badge" style={{ fontSize: '9px', textTransform: 'uppercase' }}>
+                Autofilling...
+              </span>
             )}
           </div>
 
-          {/* Body Field */}
-          <div className={`compose-textarea-wrapper ${activeTypingField === 'body' ? 'ai-filling-field' : ''}`} style={{ minHeight: '260px' }}>
-            <textarea 
+          {/* Body: textarea */}
+          <div
+            className={`compose-textarea-wrapper ${activeTypingField === 'body' ? 'ai-filling-field' : ''}`}
+            style={{ minHeight: '260px' }}
+          >
+            <textarea
               ref={bodyRef}
               value={body}
               onChange={(e) => setBody(e.target.value)}
               placeholder="Write your message here..."
               rows={12}
-              disabled={activeTypingField !== null}
+              disabled={isTyping}
               className="compose-body-textarea"
             />
             {activeTypingField === 'body' && (
               <div className="compose-indicator-badge">
                 <Sparkles className="w-3 h-3" />
-                <span>AI Autofilling body...</span>
+                <span>AI is typing body...</span>
               </div>
             )}
           </div>
 
-          {/* Bottom Actions */}
-          <div className="modal-actions-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          {/* ---- Bottom Action Bar ---- */}
+          <div
+            className="modal-actions-row"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}
+          >
             <span className="compose-footer-note">
-              {activeTypingField ? 'Wait for AI to complete autofill...' : 'Press Send to deliver.'}
+              {isTyping
+                ? 'Please wait for AI to finish autofilling...'
+                : isSending
+                  ? 'Sending your email...'
+                  : 'Press Send to deliver your message.'
+              }
             </span>
-            <div style={{ display: 'flex', gap: '12px' }}>
+
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              {/* Cancel — disabled while sending */}
               <button
                 type="button"
                 onClick={onClose}
-                disabled={activeTypingField !== null}
+                disabled={isTyping || isSending}
                 className="btn-panel-cancel"
               >
                 Cancel
               </button>
+
+              {/* Send — full animated button */}
               <button
                 type="submit"
-                disabled={activeTypingField !== null || !to || !subject || !body}
-                className="btn-compose-send"
+                disabled={isTyping || !isFormReady || isSending}
+                className={sendButtonClass}
               >
-                <Send className="w-4 h-4" />
-                <span>Send Email</span>
+                {getSendButtonContent()}
               </button>
             </div>
           </div>

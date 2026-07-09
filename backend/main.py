@@ -2,7 +2,7 @@ import os
 import json
 import asyncio
 from typing import List, Dict, Any, Optional
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Body
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Body, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 from .database import engine, Base, SessionLocal  # noqa: E402
-from .models import EmailConfig  # noqa: E402
+from .models import EmailConfig, ApiLog  # noqa: E402
 from .mail_service import mail_service  # noqa: E402
 from .ai_service import ai_service  # noqa: E402
 
@@ -39,6 +39,43 @@ else:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    # Retrieve real client IP (taking proxies like Nginx into account)
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        ip = forwarded_for.split(",")[0].strip()
+    else:
+        ip = request.client.host if request.client else "unknown"
+
+    endpoint = request.url.path
+    method = request.method
+    user_agent = request.headers.get("user-agent", "unknown")
+
+    # Proceed with request
+    response = await call_next(request)
+
+    # Save to DB in background so we don't slow down the main thread
+    # Only log requests to actual API endpoints, not WebSocket or static/docs
+    if endpoint.startswith("/api") and endpoint != "/api/logs":
+        db = SessionLocal()
+        try:
+            log_entry = ApiLog(
+                ip_address=ip,
+                endpoint=endpoint,
+                method=method,
+                user_agent=user_agent
+            )
+            db.add(log_entry)
+            db.commit()
+        except Exception as e:
+            print(f"Failed to save request log: {e}")
+            db.rollback()
+        finally:
+            db.close()
+
+    return response
 
 # Keep track of active WebSocket connections
 class ConnectionManager:
@@ -311,3 +348,27 @@ async def chat_assistant(data: ChatInput):
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/logs")
+def get_api_logs(limit: int = 100):
+    db = SessionLocal()
+    try:
+        logs = db.query(ApiLog).order_by(ApiLog.timestamp.desc()).limit(limit).all()
+        return {
+            "success": True,
+            "logs": [
+                {
+                    "id": l.id,
+                    "ip_address": l.ip_address,
+                    "endpoint": l.endpoint,
+                    "method": l.method,
+                    "user_agent": l.user_agent,
+                    "timestamp": l.timestamp.isoformat()
+                }
+                for l in logs
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()

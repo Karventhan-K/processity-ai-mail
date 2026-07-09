@@ -30,3 +30,13 @@ class EmailRecord(Base):
     is_unread = Column(Boolean, default=True)
     is_sent = Column(Boolean, default=False)
     thread_id = Column(String, index=True, nullable=True)
+
+class ApiLog(Base):
+    __tablename__ = "api_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ip_address = Column(String, index=True, nullable=True)
+    endpoint = Column(String, index=True, nullable=False)
+    method = Column(String, nullable=False)
+    user_agent = Column(String, nullable=True)
+    timestamp = Column(DateTime, default=datetime.utcnow)

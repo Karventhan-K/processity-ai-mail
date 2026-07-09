@@ -49,5 +49,18 @@ class TestMailApp(unittest.TestCase):
         open_action = [a for a in res["actions"] if a["name"] == "openEmail"][0]
         self.assertEqual(open_action["args"]["keyword"], "david")
 
+    def test_get_api_logs(self):
+        """Test api logs endpoint works and logs correctly"""
+        # Call config endpoint to trigger middleware log
+        self.client.get("/api/config")
+        
+        # Verify log retrieval returns successfully
+        response = self.client.get("/api/logs")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data.get("success"))
+        self.assertIsInstance(data.get("logs"), list)
+        self.assertTrue(len(data.get("logs")) > 0)
+
 if __name__ == "__main__":
     unittest.main()

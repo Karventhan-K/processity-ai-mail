@@ -7,7 +7,7 @@ import EmailDetail from '../components/EmailDetail';
 import AssistantPanel from '../components/AssistantPanel';
 import ComposeModal from '../components/ComposeModal';
 import ConfigPanel from '../components/ConfigPanel';
-import { CheckCircle, ShieldAlert, Menu, Sparkles } from 'lucide-react';
+import { CheckCircle, ShieldAlert, Menu, Sparkles, Sun, Moon } from 'lucide-react';
 
 const getBackendUrl = () => {
   if (typeof window !== 'undefined') {
@@ -59,6 +59,9 @@ export default function App() {
   const [composeInitialData, setComposeInitialData] = useState(null);
   const [composeAutoFillData, setComposeAutoFillData] = useState(null);
 
+  // Drafts — saved locally in localStorage
+  const [drafts, setDrafts] = useState([]);
+
   // Assistant states
   const [assistantMessages, setAssistantMessages] = useState([]);
   const [isAssistantGenerating, setIsAssistantGenerating] = useState(false);
@@ -73,6 +76,38 @@ export default function App() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen]     = useState(false);
   const [isMobileAssistantOpen, setIsMobileAssistantOpen] = useState(false);
 
+  // Theme state — 'dark' (default) or 'light'
+  // Read saved preference from localStorage on first load
+  const [theme, setTheme] = useState('dark');
+
+  // Apply the theme to <html data-theme="..."> whenever it changes
+  useEffect(() => {
+    const saved = localStorage.getItem('processity-theme');
+    if (saved === 'light' || saved === 'dark') {
+      setTheme(saved);
+    }
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('processity-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
+
+  // Load drafts from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('processity-drafts');
+    if (saved) {
+      try { setDrafts(JSON.parse(saved)); } catch {}
+    }
+  }, []);
+
+  // Persist drafts to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('processity-drafts', JSON.stringify(drafts));
+  }, [drafts]);
+
   // Close all drawers (used by backdrop click)
   const closeAllDrawers = () => {
     setIsMobileSidebarOpen(false);
@@ -83,6 +118,45 @@ export default function App() {
   const showToast = (message, type = 'info') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
+  };
+
+  // -------------------------------------------------------
+  // Draft handlers
+  // -------------------------------------------------------
+
+  /**
+   * Save or update a draft.
+   * If existingId is passed, updates that draft in place.
+   * Returns the draft id.
+   */
+  const saveDraft = (draftData, existingId = null) => {
+    const id = existingId || `draft-${Date.now()}`;
+    const draft = {
+      id,
+      to:      draftData.to      || '',
+      subject: draftData.subject || '',
+      body:    draftData.body    || '',
+      savedAt: new Date().toISOString(),
+    };
+    setDrafts(prev => [draft, ...prev.filter(d => d.id !== id)]);
+    return id;
+  };
+
+  /** Delete a draft by id */
+  const deleteDraft = (id) => {
+    setDrafts(prev => prev.filter(d => d.id !== id));
+  };
+
+  /** Open a saved draft in the compose modal (and delete it from drafts) */
+  const openDraft = (draft) => {
+    setComposeInitialData({
+      to:      draft.to,
+      subject: draft.subject,
+      body:    draft.body,
+      draftId: draft.id,   // track so we can delete on send
+    });
+    setComposeAutoFillData(null);
+    setIsComposeOpen(true);
   };
 
   // Fetch initial config, email list, load chat history and setup WebSockets on mount
@@ -526,38 +600,76 @@ export default function App() {
     showToast('Chat history cleared', 'success');
   };
 
-  // Filter processing for rendering
-  const filteredEmails = emails.filter((email) => {
-    if (currentFolder === 'inbox' && email.sent) return false;
-    if (currentFolder === 'sent' && !email.sent) return false;
+  // Filter emails for the current folder, search, and filter pill
+  // When the folder is 'drafts', return the local drafts list formatted as email items
+  const filteredEmails = currentFolder === 'drafts'
+    ? drafts
+        .filter(d => {
+          if (!searchQuery.trim()) return true;
+          const q = searchQuery.toLowerCase();
+          return (
+            d.subject.toLowerCase().includes(q) ||
+            d.body.toLowerCase().includes(q) ||
+            d.to.toLowerCase().includes(q)
+          );
+        })
+        .map(d => ({
+          id:       d.id,
+          from:     d.to  || '(No Recipient)',
+          fromName: d.to  || '(No Recipient)',
+          subject:  d.subject || '(No Subject)',
+          body:     d.body || '',
+          preview:  (d.body || '').slice(0, 100),
+          date:     d.savedAt,
+          isDraft:  true,
+          unread:   false,
+          sent:     false,
+        }))
+    : emails.filter((email) => {
+        if (currentFolder === 'inbox' && email.sent) return false;
+        if (currentFolder === 'sent'  && !email.sent) return false;
 
-    if (activeFilter === 'unread' && !email.unread) return false;
-    if (activeFilter === 'recent') {
-      const emailDate = new Date(email.date);
-      const limit = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
-      if (emailDate < limit) return false;
-    }
+        if (activeFilter === 'unread' && !email.unread) return false;
+        if (activeFilter === 'recent') {
+          const emailDate = new Date(email.date);
+          const limit = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
+          if (emailDate < limit) return false;
+        }
 
-    if (searchQuery.trim() !== '') {
-      const query = searchQuery.toLowerCase();
-      const matchSubject = email.subject.toLowerCase().includes(query);
-      const matchBody = email.body.toLowerCase().includes(query);
-      const matchSender = email.from.toLowerCase().includes(query) || (email.fromName && email.fromName.toLowerCase().includes(query));
-      return matchSubject || matchBody || matchSender;
-    }
+        if (searchQuery.trim() !== '') {
+          const query = searchQuery.toLowerCase();
+          const matchSubject = email.subject.toLowerCase().includes(query);
+          const matchBody    = email.body.toLowerCase().includes(query);
+          const matchSender  = email.from.toLowerCase().includes(query) || (email.fromName && email.fromName.toLowerCase().includes(query));
+          return matchSubject || matchBody || matchSender;
+        }
 
-    return true;
-  });
+        return true;
+      });
 
   const unreadCount = emails.filter(e => e.unread && !e.sent).length;
+
+  /**
+   * Handle email selection from the list.
+   * If a draft is clicked, open it in the compose modal instead of showing email detail.
+   */
+  const handleSelectEmailWithDraft = (email) => {
+    if (email.isDraft) {
+      const draft = drafts.find(d => d.id === email.id);
+      if (draft) openDraft(draft);
+      return;
+    }
+    handleSelectEmail(email);
+  };
 
   return (
     <div className="app-container">
 
       {/* =============================================
           MOBILE TOP BAR (only visible on ≤ 768px)
-          Left icon  → opens Sidebar drawer (left → right)
-          Right icon → opens AI Agent drawer (right → left)
+          Left  → opens Sidebar drawer (left → right)
+          Center → brand + theme toggle
+          Right  → opens AI Agent drawer (right → left)
       ============================================== */}
       <div className="mobile-topbar">
         {/* Hamburger — opens sidebar */}
@@ -574,6 +686,18 @@ export default function App() {
           <Sparkles className="w-4 h-4" style={{ color: 'var(--accent-purple)' }} />
           <span>Processity AI</span>
         </div>
+
+        {/* Theme toggle icon */}
+        <button
+          className="btn-theme-toggle-icon"
+          onClick={toggleTheme}
+          title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+        >
+          {theme === 'dark'
+            ? <Sun  className="w-4 h-4" style={{ color: '#fbbf24' }} />
+            : <Moon className="w-4 h-4" style={{ color: 'var(--accent-purple)' }} />
+          }
+        </button>
 
         {/* AI Agent icon — opens assistant drawer */}
         <button
@@ -608,6 +732,8 @@ export default function App() {
         
         {/* Sidebar — on mobile becomes a left-to-right drawer */}
         <Sidebar
+          theme={theme}
+          onToggleTheme={toggleTheme}
           isMobileOpen={isMobileSidebarOpen}
           onMobileClose={() => setIsMobileSidebarOpen(false)}
           currentFolder={currentFolder}
@@ -617,6 +743,7 @@ export default function App() {
             setIsMobileSidebarOpen(false); // close drawer after navigation
           }}
           unreadCount={unreadCount}
+          draftsCount={drafts.length}
           connectionMode={connectionMode}
           onOpenConfig={() => {
             setIsConfigOpen(true);
@@ -636,7 +763,7 @@ export default function App() {
         <EmailList 
           emails={filteredEmails}
           selectedEmailId={selectedEmail?.id}
-          onSelectEmail={handleSelectEmail}
+          onSelectEmail={handleSelectEmailWithDraft}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           activeFilter={activeFilter}
@@ -692,6 +819,10 @@ export default function App() {
           } else {
             handleSendEmail(draftData);
           }
+          // If we are sending a loaded draft, delete the draft upon successful send
+          if (composeInitialData?.draftId) {
+            deleteDraft(composeInitialData.draftId);
+          }
         }}
         initialData={composeInitialData}
         autoFillData={composeAutoFillData}
@@ -699,6 +830,8 @@ export default function App() {
           setActiveToolCall(null);
           showToast('Draft autofill completed', 'success');
         }}
+        onSaveDraft={saveDraft}
+        onDeleteDraft={deleteDraft}
       />
 
       <ConfigPanel 

@@ -16,6 +16,8 @@ export default function ComposeModal({
   initialData = null,
   autoFillData = null,
   onAutoFillComplete = null,
+  onSaveDraft = null,
+  onDeleteDraft = null,
 }) {
   const [to, setTo] = useState('');
   const [subject, setSubject] = useState('');
@@ -160,6 +162,16 @@ export default function ComposeModal({
       }, 550);           // 550ms success flash
 
     }, 350);             // 350ms sending spinner duration
+  };
+
+  // -------------------------------------------------------
+  // Save Draft action
+  // -------------------------------------------------------
+  const handleSaveClick = () => {
+    if (onSaveDraft) {
+      onSaveDraft({ to, subject, body }, initialData?.draftId);
+    }
+    onClose();
   };
 
 
@@ -313,6 +325,22 @@ export default function ComposeModal({
                 className="btn-panel-cancel"
               >
                 Cancel
+              </button>
+
+              {/* Save Draft button */}
+              <button
+                type="button"
+                onClick={handleSaveClick}
+                disabled={isTyping || isSending || (!to.trim() && !subject.trim() && !body.trim())}
+                className="btn-panel-cancel"
+                style={{
+                  color: 'var(--accent-cyan)',
+                  borderColor: 'rgba(6, 182, 212, 0.35)',
+                  background: 'rgba(6, 182, 212, 0.04)'
+                }}
+                title="Save this message as a local draft"
+              >
+                Save Draft
               </button>
 
               {/* Send — full animated button */}

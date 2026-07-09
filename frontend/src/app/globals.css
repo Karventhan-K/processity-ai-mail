@@ -6,7 +6,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Fira+Code:wght@400;500&display=swap');
 
 /* ---------------------------------------------------------
-   1. CSS CUSTOM PROPERTIES (Design Tokens)
+   1. CSS CUSTOM PROPERTIES — Dark Mode (Default)
    --------------------------------------------------------- */
 :root {
   /* Backgrounds */
@@ -15,6 +15,16 @@
   --bg-tertiary:   #171c3d;
   --bg-glass:      rgba(13, 17, 39, 0.65);
   --bg-glass-hover: rgba(22, 28, 62, 0.8);
+
+  /* Panel backgrounds (named for easy theming) */
+  --panel-sidebar:   #090b1c;
+  --panel-list:      #080a18;
+  --panel-detail:    #070812;
+  --panel-assistant: #080a18;
+  --panel-footer:    #060815;
+  --panel-header:    #090b17;
+  --panel-modal:     #0b0e22;
+  --panel-modal-hd:  #0e122b;
 
   /* Borders */
   --border-glow:   rgba(139, 92, 246, 0.2);
@@ -53,12 +63,72 @@
 }
 
 /* ---------------------------------------------------------
+   1b. CSS CUSTOM PROPERTIES — Light Mode Override
+       Applied when <html data-theme="light">
+   --------------------------------------------------------- */
+[data-theme="light"] {
+  /* Backgrounds */
+  --bg-primary:     #f0f2fa;
+  --bg-secondary:   #e6e9f6;
+  --bg-tertiary:    #d9ddf0;
+  --bg-glass:       rgba(255, 255, 255, 0.88);
+  --bg-glass-hover: rgba(255, 255, 255, 0.96);
+
+  /* Panel backgrounds */
+  --panel-sidebar:   #ffffff;
+  --panel-list:      #f7f8fd;
+  --panel-detail:    #f2f4fa;
+  --panel-assistant: #f7f8fd;
+  --panel-footer:    #eef0f8;
+  --panel-header:    #ffffff;
+  --panel-modal:     #ffffff;
+  --panel-modal-hd:  #f7f8fd;
+
+  /* Borders */
+  --border-glow:  rgba(124, 58, 237, 0.18);
+  --border-glass: rgba(99, 102, 155, 0.14);
+
+  /* Accents — slightly richer for light bg */
+  --accent-purple:      #7c3aed;
+  --accent-purple-hover: #6d28d9;
+  --accent-purple-glow: rgba(124, 58, 237, 0.28);
+  --accent-cyan:        #0891b2;
+  --accent-cyan-glow:   rgba(8, 145, 178, 0.28);
+
+  /* Text */
+  --text-primary:   #1e1b4b;
+  --text-secondary: #4c4f7a;
+  --text-muted:     #8890aa;
+
+  /* Shadows */
+  --shadow-glow:      0 0 20px rgba(124, 58, 237, 0.10);
+  --shadow-cyan-glow: 0 0 20px rgba(8, 145, 178, 0.10);
+  --shadow-card:      0 4px 24px rgba(99, 102, 155, 0.14);
+}
+
+/* ---------------------------------------------------------
    2. RESET & BASE
    --------------------------------------------------------- */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+/* Smooth colour transitions when theme changes */
+body,
+.app-sidebar, .email-list, .email-detail, .assistant-sidebar,
+.email-card, .modal-box, .modal-header, .detail-header,
+.assistant-header, .chat-input-form, .search-input, .form-input,
+.chat-text-input, .compose-field-input, .compose-body-textarea,
+.thread-message-node, .connection-card, .chat-bubble,
+.pending-send-panel, .executing-tool-panel, .mobile-topbar,
+.sidebar-footer, .btn-settings, .btn-simulate, .suggestion-btn {
+  transition:
+    background-color 0.3s ease,
+    border-color     0.3s ease,
+    color            0.3s ease,
+    box-shadow       0.3s ease;
 }
 
 body {
@@ -72,6 +142,13 @@ body {
   height: 100vh;
   width: 100vw;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Light mode body gradient */
+[data-theme="light"] body {
+  background-image:
+    radial-gradient(at 0% 0%,   rgba(124, 58, 237, 0.06) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(8, 145, 178, 0.06) 0px, transparent 50%);
 }
 
 button {
@@ -245,7 +322,7 @@ input, textarea {
   font-family: var(--font-heading);
   font-size: 18px;
   font-weight: 700;
-  color: white;
+  color: var(--text-primary);
   white-space: nowrap;
 }
 
@@ -522,7 +599,7 @@ input, textarea {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border-glass);
   border-radius: 10px;
-  color: white;
+  color: var(--text-primary);
   font-size: 13px;
   outline: none;
   transition: var(--transition-smooth);
@@ -998,7 +1075,7 @@ input, textarea {
 .assistant-title-text {
   font-size: 14px;
   font-weight: 600;
-  color: white;
+  color: var(--text-primary);
 }
 
 .assistant-subtitle-text {
@@ -1176,7 +1253,7 @@ input, textarea {
 .panel-header-title {
   font-size: 12.5px;
   font-weight: 600;
-  color: white;
+  color: var(--text-primary);
 }
 
 .panel-header-desc {
@@ -1306,7 +1383,7 @@ input, textarea {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border-glass);
   border-radius: 12px;
-  color: white;
+  color: var(--text-primary);
   font-size: 13.5px;
   line-height: 1.45;
   outline: none;
@@ -1423,7 +1500,7 @@ input, textarea {
 .modal-title {
   font-size: 16px;
   font-weight: 600;
-  color: white;
+  color: var(--text-primary);
 }
 
 .btn-modal-close {
@@ -1493,7 +1570,7 @@ input, textarea {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border-glass);
   border-radius: 11px;
-  color: white;
+  color: var(--text-primary);
   font-size: 13.5px;
   outline: none;
   transition: var(--transition-smooth);
@@ -1670,7 +1747,7 @@ input, textarea {
   flex: 1;
   background: transparent;
   border: none;
-  color: white;
+  color: var(--text-primary);
   font-size: 13.5px;
   outline: none;
   transition: var(--transition-smooth);
@@ -1694,7 +1771,7 @@ input, textarea {
   width: 100%;
   background: transparent;
   border: none;
-  color: white;
+  color: var(--text-primary);
   font-size: 13.5px;
   outline: none;
   resize: none;
@@ -2289,4 +2366,308 @@ input, textarea {
     animation: none !important;
   }
 }
+
+/* ==========================================================
+   18. LIGHT MODE — Panel & Element Overrides
+   These override specific hard-coded dark colours so that
+   every surface looks correct in light mode.
+   ========================================================== */
+
+/* ---- Panels & Backgrounds ---- */
+[data-theme="light"] .app-sidebar       { background: var(--panel-sidebar); border-right-color: var(--border-glass); }
+[data-theme="light"] .email-list        { background: var(--panel-list);    border-right-color: var(--border-glass); }
+[data-theme="light"] .email-detail      { background: var(--panel-detail); }
+[data-theme="light"] .assistant-sidebar { background: var(--panel-assistant); border-left-color: var(--border-glass); }
+[data-theme="light"] .sidebar-footer    { background: var(--panel-footer); border-top-color: var(--border-glass); }
+[data-theme="light"] .assistant-header  { background: var(--panel-header); border-bottom-color: var(--border-glass); }
+[data-theme="light"] .chat-input-form   { background: var(--panel-header); border-top-color: var(--border-glass); }
+[data-theme="light"] .detail-header     { background: var(--panel-header); border-bottom-color: var(--border-glass); }
+[data-theme="light"] .modal-box         { background: var(--panel-modal);  border-color: var(--border-glass); box-shadow: 0 24px 80px rgba(99,102,155,0.2); }
+[data-theme="light"] .modal-header      { background: var(--panel-modal-hd); border-bottom-color: var(--border-glass); }
+[data-theme="light"] .modal-form-content { background: var(--panel-modal); }
+[data-theme="light"] .modal-actions-row { background: var(--panel-modal-hd); border-top-color: var(--border-glass); }
+[data-theme="light"] .mobile-topbar     { background: var(--panel-sidebar); border-bottom-color: var(--border-glass); }
+
+/* ---- Email List Items ---- */
+[data-theme="light"] .email-card {
+  background: var(--panel-modal);
+  border-color: var(--border-glass);
+}
+[data-theme="light"] .email-card:hover {
+  background: #ede9fe;
+  border-color: rgba(124, 58, 237, 0.25);
+}
+[data-theme="light"] .email-card.selected {
+  background: rgba(124, 58, 237, 0.07);
+  border-color: rgba(124, 58, 237, 0.3);
+}
+[data-theme="light"] .card-sender, [data-theme="light"] .card-subject {
+  color: var(--text-primary);
+}
+[data-theme="light"] .card-preview {
+  color: var(--text-muted);
+}
+
+/* ---- Thread / Email Detail ---- */
+[data-theme="light"] .thread-message-node {
+  background: var(--panel-modal);
+  border-color: var(--border-glass);
+}
+[data-theme="light"] .message-node-body {
+  border-top-color: var(--border-glass);
+  color: var(--text-secondary);
+}
+[data-theme="light"] .sender-name-text,
+[data-theme="light"] .detail-subject {
+  color: var(--text-primary);
+}
+[data-theme="light"] .message-node-meta { color: var(--text-muted); }
+
+/* ---- Inputs ---- */
+[data-theme="light"] .search-input,
+[data-theme="light"] .form-input,
+[data-theme="light"] .chat-text-input,
+[data-theme="light"] .compose-field-input,
+[data-theme="light"] .compose-body-textarea {
+  background: rgba(99, 102, 155, 0.08);
+  color: var(--text-primary);
+  border-color: var(--border-glass);
+}
+[data-theme="light"] .search-input:focus,
+[data-theme="light"] .form-input:focus,
+[data-theme="light"] .chat-text-input:focus,
+[data-theme="light"] .compose-field-input:focus,
+[data-theme="light"] .compose-body-textarea:focus {
+  background: rgba(124, 58, 237, 0.04);
+  border-color: rgba(124, 58, 237, 0.35);
+}
+[data-theme="light"] .search-input::placeholder,
+[data-theme="light"] .form-input::placeholder,
+[data-theme="light"] .chat-text-input::placeholder,
+[data-theme="light"] .compose-field-input::placeholder,
+[data-theme="light"] .compose-body-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* ---- AI Chat Bubbles ---- */
+[data-theme="light"] .chat-bubble-wrapper.assistant .chat-bubble {
+  background: var(--panel-modal);
+  border-color: var(--border-glass);
+  color: var(--text-primary);
+}
+[data-theme="light"] .chat-bubble-wrapper.user .chat-bubble {
+  background: rgba(124, 58, 237, 0.1);
+  color: var(--text-primary);
+}
+[data-theme="light"] .chat-action-card {
+  background: rgba(99, 102, 155, 0.07);
+  border-color: var(--border-glass);
+}
+[data-theme="light"] .chat-action-body-preview {
+  background: rgba(99, 102, 155, 0.1);
+  color: var(--text-secondary);
+}
+[data-theme="light"] .chat-action-badge {
+  background: rgba(99, 102, 155, 0.1);
+  color: var(--text-secondary);
+}
+[data-theme="light"] .suggestion-btn {
+  background: rgba(99, 102, 155, 0.06);
+  border-color: var(--border-glass);
+  color: var(--text-secondary);
+}
+[data-theme="light"] .suggestion-btn:hover {
+  background: rgba(124, 58, 237, 0.07);
+  border-color: rgba(124, 58, 237, 0.25);
+  color: var(--accent-purple);
+}
+[data-theme="light"] .empty-chat-title { color: var(--text-primary); }
+[data-theme="light"] .empty-chat-desc  { color: var(--text-muted); }
+
+/* ---- Pending/Tool Panels ---- */
+[data-theme="light"] .pending-send-panel {
+  background: rgba(245, 158, 11, 0.05);
+  border-color: rgba(245, 158, 11, 0.2);
+}
+[data-theme="light"] .draft-preview-box {
+  background: rgba(99, 102, 155, 0.07);
+  color: var(--text-secondary);
+}
+[data-theme="light"] .executing-tool-panel {
+  background: rgba(8, 145, 178, 0.05);
+  border-color: rgba(8, 145, 178, 0.15);
+}
+
+/* ---- Sidebar Navigation ---- */
+[data-theme="light"] .brand-title   { color: var(--text-primary); }
+[data-theme="light"] .brand-subtitle { color: var(--text-muted); }
+[data-theme="light"] .nav-item      { color: var(--text-secondary); }
+[data-theme="light"] .nav-item:hover {
+  background: rgba(124, 58, 237, 0.06);
+  color: var(--accent-purple);
+  border-color: rgba(124, 58, 237, 0.12);
+}
+[data-theme="light"] .nav-item.active {
+  background: rgba(124, 58, 237, 0.08);
+  color: var(--accent-purple);
+  border-color: rgba(124, 58, 237, 0.2);
+}
+[data-theme="light"] .connection-card {
+  background: rgba(99, 102, 155, 0.07);
+  border-color: var(--border-glass);
+}
+[data-theme="light"] .btn-settings {
+  background: rgba(99, 102, 155, 0.07);
+  color: var(--text-secondary);
+  border-color: var(--border-glass);
+}
+[data-theme="light"] .btn-settings:hover {
+  background: rgba(124, 58, 237, 0.07);
+  color: var(--accent-purple);
+}
+[data-theme="light"] .btn-simulate {
+  background: rgba(8, 145, 178, 0.07);
+  color: var(--accent-cyan);
+  border-color: rgba(8, 145, 178, 0.2);
+}
+
+/* ---- Config form ---- */
+[data-theme="light"] .info-alert-box {
+  background: rgba(59, 130, 246, 0.06);
+  border-color: rgba(59, 130, 246, 0.15);
+}
+[data-theme="light"] .advanced-settings-block {
+  background: rgba(99, 102, 155, 0.05);
+  border-color: var(--border-glass);
+}
+[data-theme="light"] .status-test-result.success {
+  background: rgba(16, 185, 129, 0.07);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+[data-theme="light"] .status-test-result.error {
+  background: rgba(239, 68, 68, 0.07);
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+/* ---- Filter Pills ---- */
+[data-theme="light"] .filter-pill {
+  background: rgba(99, 102, 155, 0.08);
+  color: var(--text-secondary);
+  border-color: var(--border-glass);
+}
+[data-theme="light"] .filter-pill:hover {
+  background: rgba(124, 58, 237, 0.07);
+  color: var(--accent-purple);
+}
+[data-theme="light"] .filter-pill.active {
+  background: rgba(124, 58, 237, 0.12);
+  color: var(--accent-purple);
+  border-color: rgba(124, 58, 237, 0.3);
+}
+
+/* ---- Drawer backdrop ---- */
+[data-theme="light"] .mobile-drawer-backdrop {
+  background: rgba(30, 27, 75, 0.45);
+}
+
+/* ---- Dividers ---- */
+[data-theme="light"] .compose-row-border {
+  border-bottom-color: var(--border-glass);
+}
+
+/* ==========================================================
+   19. THEME TOGGLE BUTTON
+   Sun / Moon icon toggle in sidebar footer and mobile topbar
+   ========================================================== */
+
+/* Base toggle button */
+.btn-theme-toggle {
+  display:         flex;
+  align-items:     center;
+  gap:             7px;
+  width:           100%;
+  padding:         8px 12px;
+  border-radius:   10px;
+  font-size:       12px;
+  font-weight:     500;
+  cursor:          pointer;
+  color:           var(--text-secondary);
+  background:      rgba(255, 255, 255, 0.04);
+  border:          1px solid var(--border-glass);
+  transition:      all 0.2s ease;
+  letter-spacing:  0.01em;
+}
+
+.btn-theme-toggle:hover {
+  background:  rgba(255, 255, 255, 0.08);
+  color:       var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.12);
+  transform:   translateY(-1px);
+}
+
+.btn-theme-toggle:active {
+  transform: scale(0.97);
+}
+
+/* Icon rotates smoothly on switch */
+.btn-theme-toggle svg {
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease;
+  flex-shrink: 0;
+}
+
+/* Sun icon glows amber in dark mode */
+.btn-theme-toggle .icon-sun  { color: #fbbf24; }
+/* Moon icon glows purple in light mode */
+.btn-theme-toggle .icon-moon { color: var(--accent-purple); }
+
+/* Light mode overrides for toggle button */
+[data-theme="light"] .btn-theme-toggle {
+  background:   rgba(99, 102, 155, 0.07);
+  border-color: var(--border-glass);
+  color:        var(--text-secondary);
+}
+[data-theme="light"] .btn-theme-toggle:hover {
+  background:   rgba(124, 58, 237, 0.07);
+  color:        var(--accent-purple);
+  border-color: rgba(124, 58, 237, 0.2);
+}
+
+/* Compact version for mobile topbar */
+.btn-theme-toggle-icon {
+  width:           40px;
+  height:          40px;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  border-radius:   10px;
+  background:      rgba(255, 255, 255, 0.05);
+  border:          1px solid var(--border-glass);
+  color:           var(--text-secondary);
+  cursor:          pointer;
+  transition:      all 0.2s ease;
+  flex-shrink:     0;
+}
+
+.btn-theme-toggle-icon:hover {
+  background:   rgba(255, 255, 255, 0.1);
+  color:        white;
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.btn-theme-toggle-icon:active {
+  transform: scale(0.92);
+}
+
+[data-theme="light"] .btn-theme-toggle-icon {
+  background:   rgba(99, 102, 155, 0.08);
+  border-color: var(--border-glass);
+  color:        var(--text-secondary);
+}
+
+[data-theme="light"] .btn-theme-toggle-icon:hover {
+  background:   rgba(124, 58, 237, 0.09);
+  color:        var(--accent-purple);
+  border-color: rgba(124, 58, 237, 0.25);
+}
+
 

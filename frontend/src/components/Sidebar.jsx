@@ -1,14 +1,17 @@
 'use client';
 
 import React from 'react';
-import { Mail, Send, PenTool, Settings, Sparkles, RefreshCw, Layers, X } from 'lucide-react';
+import { Mail, Send, PenTool, Settings, Sparkles, RefreshCw, Layers, X, Sun, Moon, FileText } from 'lucide-react';
 
 /**
  * Sidebar — main navigation rail.
  *
  * Desktop: Fixed left column (260px).
  * Mobile:  Hidden by default. Slides in LEFT → RIGHT as a drawer
- *          when `isMobileOpen` is true. A close (×) button dismisses it.
+ *          when `isMobileOpen` is true.
+ *
+ * Theme:   Renders a Sun/Moon toggle button in the footer.
+ *          `theme` prop drives the icon; `onToggleTheme` fires the switch.
  */
 export default function Sidebar({
   currentFolder,
@@ -22,11 +25,18 @@ export default function Sidebar({
   // Mobile drawer props
   isMobileOpen  = false,
   onMobileClose = () => {},
+  // Theme props
+  theme           = 'dark',
+  onToggleTheme   = () => {},
+  // Drafts props
+  draftsCount     = 0,
 }) {
+  const isLight = theme === 'light';
+
   return (
     <div className={`app-sidebar ${isMobileOpen ? 'drawer-open' : ''}`}>
 
-      {/* ---- Mobile Close Button (X) — only visible inside drawer ---- */}
+      {/* ---- Mobile Close Button (×) — only visible inside drawer ---- */}
       <button
         className="drawer-close-btn"
         onClick={onMobileClose}
@@ -85,10 +95,41 @@ export default function Sidebar({
           </div>
         </button>
 
+        {/* Drafts */}
+        <button
+          onClick={() => setCurrentFolder('drafts')}
+          className={`nav-item ${currentFolder === 'drafts' ? 'active' : ''}`}
+        >
+          <div className="nav-item-inner">
+            <FileText className="w-4 h-4" />
+            <span>Drafts</span>
+          </div>
+          {draftsCount > 0 && (
+            <span className="unread-badge" style={{ background: 'var(--accent-cyan)' }}>
+              {draftsCount}
+            </span>
+          )}
+        </button>
+
       </nav>
 
-      {/* ---- Footer: Simulation + Settings ---- */}
+      {/* ---- Footer: Theme + Simulation + Settings ---- */}
       <div className="sidebar-footer">
+
+        {/* Dark / Light mode toggle */}
+        <button
+          onClick={onToggleTheme}
+          className="btn-theme-toggle"
+          title={isLight ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+        >
+          {isLight
+            ? <Moon className="w-3\.5 h-3\.5 icon-moon" />
+            : <Sun  className="w-3\.5 h-3\.5 icon-sun"  />
+          }
+          <span>
+            {isLight ? 'Dark Mode' : 'Light Mode'}
+          </span>
+        </button>
 
         {/* Simulate incoming email button */}
         <button

@@ -103,16 +103,19 @@ jobs:
             git clean -fd
             git pull origin main
             
-            # Write environment variables to backend/.env dynamically
-            echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > backend/.env
-            echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> backend/.env
-            echo "EMAIL_USER=${{ secrets.EMAIL_USER }}" >> backend/.env
-            echo "EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }}" >> backend/.env
-            echo "SMTP_HOST=${{ secrets.SMTP_HOST }}" >> backend/.env
-            echo "SMTP_PORT=${{ secrets.SMTP_PORT }}" >> backend/.env
-            echo "IMAP_HOST=${{ secrets.IMAP_HOST }}" >> backend/.env
-            echo "IMAP_PORT=${{ secrets.IMAP_PORT }}" >> backend/.env
-            echo "DATABASE_URL=postgresql://postgres:password123@db:5432/processity" >> backend/.env
+            # Write environment variables to root .env dynamically
+            echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
+            echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
+            echo "EMAIL_USER=${{ secrets.EMAIL_USER }}" >> .env
+            echo "EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }}" >> .env
+            echo "SMTP_HOST=${{ secrets.SMTP_HOST }}" >> .env
+            echo "SMTP_PORT=${{ secrets.SMTP_PORT }}" >> .env
+            echo "IMAP_HOST=${{ secrets.IMAP_HOST }}" >> .env
+            echo "IMAP_PORT=${{ secrets.IMAP_PORT }}" >> .env
+            echo "DATABASE_URL=postgresql://postgres:password123@db:5432/processity" >> .env
+            
+            # Copy to backend/.env for container fallback compatibility
+            cp .env backend/.env
             
             # Restart containers with the new build
             sudo docker-compose down
